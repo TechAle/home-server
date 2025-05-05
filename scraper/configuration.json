@@ -1,6 +1,10 @@
 {
   "myanimelist": {
+    "url": "https://myanimelist.net",
     "username": "",
     "password": ""
-  }
+  },
+  "anilist": "https://anilist.co",
+  "checkInterval": "30m",
+  "delayClicks": "10s"
 }
