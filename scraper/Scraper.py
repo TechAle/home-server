@@ -1,6 +1,6 @@
 class scraper:
     def __init__(self, configurationPath):
-        self.url = url
+        self.url = configurationPath
 
     def scrape(self):
         # Simulate scraping the URL
