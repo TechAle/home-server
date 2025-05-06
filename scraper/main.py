@@ -3,6 +3,8 @@ from ApiManager import scraper
 bot: scraper | None = None
 if __name__ == "__main__":
     bot = scraper("configuration.json")
-    bot.auth()
-    bot.getAccessToken()
-    bot.refreshAccessToken()
+    bot.accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImVjNjUzMDFlYjczMTFlZGIzN2E2ZWQxYTBmMDlkY2U1MDVlODA2MzNmNWUxMTQ1YWY3YzVmOGIyYTlhYWVkYzhjYjQxODU4YzA4YmU4ZTliIn0.eyJhdWQiOiIwZDYzNGM0ZmM2NmYxZjY3ZmE3ZDU2YzJmNTdlODdkNiIsImp0aSI6ImVjNjUzMDFlYjczMTFlZGIzN2E2ZWQxYTBmMDlkY2U1MDVlODA2MzNmNWUxMTQ1YWY3YzVmOGIyYTlhYWVkYzhjYjQxODU4YzA4YmU4ZTliIiwiaWF0IjoxNzQ2NTIwMjExLCJuYmYiOjE3NDY1MjAyMTEsImV4cCI6MTc0OTE5ODYxMSwic3ViIjoiMTM5MTUwNTgiLCJzY29wZXMiOltdfQ.kPJ5LFLXgjppn1-xqXgDZ66Vb5ODSDHFL2KBn1kPQ3tH8adESBUv7hXBhMDNUIQb3NtLhR-NGXXiv6yo0sGcETCOZG43CiH4eoFpQ_A-yW4-Q5B2mI85ExnrLPFOR5vf4gqulLjesmDgcw_pIX2pcLG2bjyJV9yK_JaOxVTPt-b2TBR-H7Ii9HaUe_pOOVHvjCBT9IPbDNkMHgqqrVGBY4mEy0gKV6_10SPoJ-H673SLnhQ1SUgSpTvzcQPvG7qAEyM1S_-vX-YzpiAjnWs7s7WCtVHadNR1H7cQs1bnvw_2iZny9PDZUtLkyISYlmkIIE1ZVExUy_0RE389c3adSA"
+    #bot.auth()
+    #bot.getAccessToken()
+    #bot.refreshAccessToken()
+    print(bot.get_user_anime_list("@me", "watching"))
