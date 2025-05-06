@@ -15,9 +15,6 @@ class scraper:
         self.accessToken: str = ""
         self.codeChallenge: str = ""
         self.clientId: str = ""
-        self.delayClicks: int = 0
-        self.checkInterval: int = 0
-        self.urlAnilist: str = ""
         self.urlAnimelist: str = ""
         self.configurate(configurationPath)
 
@@ -26,8 +23,6 @@ class scraper:
             config = json.load(file)
             self.urlAnimelist = config["myanimelist"]["url"]
             self.urlAnilist = config["anilist"]
-            self.checkInterval = config["checkInterval"]
-            self.delayClicks = config["delayClicks"]
             self.clientId = config["myanimelist"]["clientId"]
             self.apiMAL = config["myanimelist"]["api"]
 
