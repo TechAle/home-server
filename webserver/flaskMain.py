@@ -36,7 +36,7 @@ class MyFlaskApp:
         return decorator
 
     def my_minute_task(self):
-        print(f"⏰ Running scheduled task. {len(self.message_log)} messages logged.")
+        pass
 
     def register_scheduled_tasks(self):
         self.scheduled_task(interval=10)(self.my_minute_task)
