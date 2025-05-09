@@ -1,13 +1,8 @@
 {
-  "myanimelist": {
-    "url": "https://myanimelist.net",
-    "api": "https://api.myanimelist.net/v2",
-    "clientId": "0d634c4fc66f1f67fa7d56c2f57e87d6"
-  },
   "anilist": {
     "api": "https://graphql.anilist.co",
     "clientId": "26629",
-    "clientSecret": "HBM4h61ex6ee33FeDoafQpQMuffrMRC7hMqe9GBl",
+    "clientSecret": "",
     "redirectUri": "https://localhost:8000"
   }
 }
