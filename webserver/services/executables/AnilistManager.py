@@ -1,9 +1,8 @@
 import json
+import urllib
+
 import requests
 import webbrowser
-from webserver.services.Routes import route
-from webserver.services.Scheduled_Task import scheduled_task
-from webserver.services.Server_Function import server_function
 
 
 class analistManager:
@@ -93,11 +92,6 @@ class analistManager:
         else:
             raise Exception(f"GraphQL query failed with status {response.status_code}")
 
-    @scheduled_task(interval=60)
-    def checkChanges(self):
-        pass
-
-    @route("/api/anilist/getUserId", methods=["GET"])
     def get_current_user(self):
         query = """
         query {
@@ -109,9 +103,7 @@ class analistManager:
         self.currentId = self.execute_query(query)["data"]["Viewer"]["id"]
         return self.currentId
 
-    @route("/api/anilist/getUser", methods=["GET"])
-    @server_function()
-    def check_status_anime(self):
+    def get_watching_anime(self):
         query = """
         query MediaListCollection($type: MediaType, $status: MediaListStatus, $userId: Int) {
             MediaListCollection(type: $type, status: $status, userId: $userId) {
@@ -134,17 +126,44 @@ class analistManager:
         }
         """
         variables = {
-          "type": "ANIME",
-          "status": "CURRENT",
-          "userId": self.currentId
+            "type": "ANIME",
+            "status": "CURRENT",
+            "userId": self.currentId
         }
         response = self.execute_query(query, variables)
-        return response["data"]["MediaListCollection"]["lists"]
+        return response["data"]["MediaListCollection"]["lists"][0]["entries"]
 
-class ciao:
-    def __init__(self):
-        self.hello = "ciao"
-        self.hello2 = "ciao2"
-        self.hello3 = "ciao3"
-        self.hello4 = "ciao4"
-        self.hello5 = "ciao5"
+    def get_to_watch(self):
+        watching = self.get_watching_anime()
+        to_watch = {}
+        for anime in watching:
+            if anime["media"]["nextAiringEpisode"] is None or \
+                    anime["media"]["nextAiringEpisode"]["episode"] > anime["progress"] + 1:
+                to_watch[anime["media"]["title"]["english"]] = {
+                    "progress": anime["progress"],
+                    "link": []
+                }
+        for anime in to_watch:
+            to_watch_list = [anime]
+            if anime.__contains__("Season") or anime.__contains__("Part"):
+                to_watch_list.append(anime.replace("Season ", "").replace("Part ", ""))
+            for animeLoad in to_watch_list:
+                response = requests.get(f"https://www.anisaturn.com/index.php?search=1&key={urllib.parse.quote(animeLoad)}")
+                if response.status_code == 200:
+                    data = response.json()
+                    if len(data) > 0:
+                        for links in data:
+                            to_watch[anime]["link"].append(f"https://www.anisaturn.com/anime/{links['link']}")
+                        break
+                else:
+                    to_watch[anime] = ""
+
+        for anime in to_watch:
+            for idx, link in enumerate(to_watch[anime]["link"]):
+                newLinkGet = f"{link.replace('https://www.anisaturn.com/anime/', 'https://www.anisaturn.com/episode/')}-ep-{to_watch[anime]["progress"]}"
+                response = requests.get(newLinkGet)
+                if response.status_code == 200:
+                    data = response.text
+                    if data.__contains__("https://www.anisaturn.com/watch?file="):
+                        to_watch[anime]["link"][idx] = "https://www.anisaturn.com/watch?file=" + data.split("https://www.anisaturn.com/watch?file=")[1].split('"')[0]
+        return to_watch
