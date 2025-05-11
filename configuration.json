@@ -2,7 +2,7 @@
   "anilist": {
     "api": "https://graphql.anilist.co",
     "clientId": "26629",
-    "clientSecret": "",
+    "clientSecret": "HBM4h61ex6ee33FeDoafQpQMuffrMRC7hMqe9GBl",
     "redirectUri": "https://localhost:8000"
   }
 }

@@ -4,7 +4,10 @@ import time
 
 from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
-from webpush_handler import trigger_push_notifications_for_subscriptions
+from webserver.utils.ClassUtils import getClassesWithRoutes
+from importlib import import_module
+
+from webserver.webpush_handler import trigger_push_notifications_for_subscriptions
 
 
 class MyFlaskApp:
@@ -22,6 +25,7 @@ class MyFlaskApp:
 
         # Scheduler logic to avoid re-entrance in debug autoreload
         if self.app.debug or 'RUNNING' in os.environ:
+            self.init_executables()
             self.register_scheduled_tasks()
             self.start_scheduler()
         else:
@@ -81,19 +85,14 @@ class MyFlaskApp:
 
     # HTML Pages
     def home_page(self):
-        return render_template("index.html")
+        return render_template("webserver/templates/index.html")
 
     def unsubscribe_page(self):
-        return render_template("unsubscribe.html")
+        return render_template("webserver/templates/unsubscribe.html")
 
     def admin_page(self):
-        return render_template("admin.html")
+        return render_template("webserver/templates/admin.html")
 
-    # API: Echo
-    def echo(self):
-        data = request.get_json()
-        self.message_log.append(data)
-        return jsonify({'you_sent': data, 'total_messages': len(self.message_log)})
 
     # API: Push subscription
     def create_push_subscription(self):
@@ -134,6 +133,19 @@ class MyFlaskApp:
 
     def run(self, **kwargs):
         self.app.run(**kwargs)
+
+    def init_executables(self):
+        # Get all possible executables
+        executables = getClassesWithRoutes("webserver/services/executables")
+        # Now add them to the app
+        for file, class_name, method_name in executables:
+            module_name = file.replace("/", ".").replace(".py", "")
+            module = import_module(module_name)
+            cls = getattr(module, class_name)
+            instance = cls()
+            route_info = getattr(instance, method_name)._route_info
+            self.app.add_url_rule(route_info["rule"], view_func=getattr(instance, method_name), methods=route_info["methods"])
+
 
 
 if __name__ == '__main__':

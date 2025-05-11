@@ -1,10 +1,11 @@
 import json
 import requests
 import webbrowser
+from webserver.services.Routes import route
 
 
 class analistManager:
-    def __init__(self, configurationPath: str):
+    def __init__(self, configurationPath: str = "configuration.json"):
         self.apiAniList: str = ""
         self.authorization: str = ""
         self.code: str = ""
@@ -15,6 +16,10 @@ class analistManager:
         self.redirectUri: str = ""
         self.currentId: int = -1
         self.configurate(configurationPath)
+        # bot.auth()
+        # print(bot.getAccessToken())
+        self.accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6Ijc2YjBmMmU5YWIzMzU0NWIxMjFjY2I4MjUyYTMyMWIyNTQxOGNjZTA4NmU3YmQ5MWYzOTQ0Yzk4NzBlYmI1Nzc4Mzg0NjcxZDUwZDdlYTI2In0.eyJhdWQiOiIyNjYyOSIsImp0aSI6Ijc2YjBmMmU5YWIzMzU0NWIxMjFjY2I4MjUyYTMyMWIyNTQxOGNjZTA4NmU3YmQ5MWYzOTQ0Yzk4NzBlYmI1Nzc4Mzg0NjcxZDUwZDdlYTI2IiwiaWF0IjoxNzQ2NTI2NDQwLCJuYmYiOjE3NDY1MjY0NDAsImV4cCI6MTc3ODA2MjQ0MCwic3ViIjoiNzMxMzI5MSIsInNjb3BlcyI6W119.YiC4KcasBcLyYzeb2wGW-Xo_ta2G4IgfwXLnsMRm3W_XIjbHae1_2NEeB03jMKT7DKdMk8STW4nYWN7jvs7UKEViKskO5TtMvS5R703f47R_3xZBmV9cdfd4wHI-hc2UMFOL4Uvtb6m9QUkHVRkX1-fxXK22Zn2Rvu90-GaTQh9pHytdEqbWWJ_MEHNdqXjXWYdrfGmhMPgAxDHQspbwUbFIdGISaZi-ooB5Oa7AmAQ32YJO-LY9CQRazgnyHS2k1FRn9EPJpMkLEkTKe_-3QcpmLSY-UNyhmIFLLxEN1347rddwmKiFsKux2QTvivlgNwNFEOLWxHOiRvGNwQR_Ut6MZjN7ssiRCMeh8mRCRhgiim05UcQTs2O0OBu7jhV0MuvUXp99fpLlgCN5aPAf9J1bQBwYnot3qC_iCBW7Y-BOEnxS1q2sF47r5369ADTK1-ODB4m332El4PepKRsq745Azb2EdtuhnpWtOeJzdyyZXiWScfZY3DFBZAGonrf17kuLP3DuLe_GxSjMdn6jSB6zrf1kNmryc_B7P5FiVkJISJCtPMG0u0Ozxg1chMGLCxc4p-rd-uI73UGSXftx54PBPSbU3kwdxVkajkEKo7n1Ej0slT29ru4mg-zN47318DOvs3vH0hED50rnTHAbW5BPwGfFL6putjAUtxt3urg"
+        self.get_current_user()
 
     def configurate(self, configurationPath):
         with open(configurationPath, 'r') as file:
@@ -86,6 +91,7 @@ class analistManager:
         else:
             raise Exception(f"GraphQL query failed with status {response.status_code}")
 
+    @route("/api/anilist/getUserId", methods=["GET"])
     def get_current_user(self):
         query = """
         query {
@@ -95,7 +101,9 @@ class analistManager:
         }
         """
         self.currentId = self.execute_query(query)["data"]["Viewer"]["id"]
+        return self.currentId
 
+    @route("/api/anilist/getUser", methods=["GET"])
     def check_status_anime(self):
         query = """
         query MediaListCollection($type: MediaType, $status: MediaListStatus, $userId: Int) {
@@ -125,3 +133,11 @@ class analistManager:
         }
         response = self.execute_query(query, variables)
         return response["data"]["MediaListCollection"]["lists"]
+
+class ciao:
+    def __init__(self):
+        self.hello = "ciao"
+        self.hello2 = "ciao2"
+        self.hello3 = "ciao3"
+        self.hello4 = "ciao4"
+        self.hello5 = "ciao5"
