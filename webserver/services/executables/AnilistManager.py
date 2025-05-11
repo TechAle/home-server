@@ -2,6 +2,8 @@ import json
 import requests
 import webbrowser
 from webserver.services.Routes import route
+from webserver.services.Scheduled_Task import scheduled_task
+from webserver.services.Server_Function import server_function
 
 
 class analistManager:
@@ -91,6 +93,10 @@ class analistManager:
         else:
             raise Exception(f"GraphQL query failed with status {response.status_code}")
 
+    @scheduled_task(interval=60)
+    def checkChanges(self):
+        pass
+
     @route("/api/anilist/getUserId", methods=["GET"])
     def get_current_user(self):
         query = """
@@ -104,6 +110,7 @@ class analistManager:
         return self.currentId
 
     @route("/api/anilist/getUser", methods=["GET"])
+    @server_function()
     def check_status_anime(self):
         query = """
         query MediaListCollection($type: MediaType, $status: MediaListStatus, $userId: Int) {

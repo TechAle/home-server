@@ -4,7 +4,7 @@ import time
 
 from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
-from webserver.utils.ClassUtils import getClassesWithRoutes
+from webserver.utils.ClassUtils import getClassesWithRules
 from importlib import import_module
 
 from webserver.webpush_handler import trigger_push_notifications_for_subscriptions
@@ -19,6 +19,8 @@ class MyFlaskApp:
         self.db = SQLAlchemy(self.app)
         self.scheduled_functions = []
         self.message_log = []
+        self.managers_functions = {}
+        self.scheduled_functions = []
 
         self.init_db_models()
         self.configure_routes()
@@ -68,83 +70,94 @@ class MyFlaskApp:
             thread.start()
 
     def configure_routes(self):
-        app = self.app
-
         # HTML routes
-        app.add_url_rule("/", view_func=self.home_page)
-        app.add_url_rule("/unsubscribe", view_func=self.unsubscribe_page)
-        app.add_url_rule("/admin", view_func=self.admin_page)
+        self._add_html_routes()
 
         # Push subscription API
-        app.add_url_rule("/api/push-subscriptions", view_func=self.create_push_subscription, methods=["POST"])
-        app.add_url_rule("/admin-api/trigger-push-notifications", view_func=self.trigger_push_notifications, methods=["POST"])
-
+        self._add_push_subscription_routes()
 
         # Extra test/debug route
-        app.add_url_rule('/info', view_func=self.info)
+        self._add_extra_routes()
 
-    # HTML Pages
-    def home_page(self):
-        return render_template("webserver/templates/index.html")
+    def _add_html_routes(self):
+        @self.app.route("/")
+        def home_page():
+            return render_template("webserver/templates/index.html")
 
-    def unsubscribe_page(self):
-        return render_template("webserver/templates/unsubscribe.html")
+        @self.app.route("/unsubscribe")
+        def unsubscribe_page():
+            return render_template("webserver/templates/unsubscribe.html")
 
-    def admin_page(self):
-        return render_template("webserver/templates/admin.html")
+        @self.app.route("/admin")
+        def admin_page():
+            return render_template("webserver/templates/admin.html")
 
+    def _add_push_subscription_routes(self):
+        @self.app.route("/api/push-subscriptions", methods=["POST"])
+        def create_push_subscription():
+            json_data = request.get_json()
+            subscription = self.PushSubscription.query.filter_by(
+                subscription_json=json_data['subscription_json']
+            ).first()
 
-    # API: Push subscription
-    def create_push_subscription(self):
-        json_data = request.get_json()
-        Subscription = self.PushSubscription
+            if subscription is None:
+                subscription = self.PushSubscription(subscription_json=json_data['subscription_json'])
+                self.db.session.add(subscription)
+                self.db.session.commit()
 
-        subscription = Subscription.query.filter_by(
-            subscription_json=json_data['subscription_json']
-        ).first()
+            return jsonify({
+                "status": "success",
+                "result": {
+                    "id": subscription.id,
+                    "subscription_json": subscription.subscription_json
+                }
+            })
 
-        if subscription is None:
-            subscription = Subscription(subscription_json=json_data['subscription_json'])
-            self.db.session.add(subscription)
-            self.db.session.commit()
+        @self.app.route("/admin-api/trigger-push-notifications", methods=["POST"])
+        def trigger_push_notifications():
+            json_data = request.get_json()
+            subscriptions = self.PushSubscription.query.all()
+            results = trigger_push_notifications_for_subscriptions(
+                subscriptions,
+                json_data.get('title'),
+                json_data.get('body')
+            )
+            return jsonify({"status": "success", "result": results})
 
-        return jsonify({
-            "status": "success",
-            "result": {
-                "id": subscription.id,
-                "subscription_json": subscription.subscription_json
-            }
-        })
-
-    # API: Admin trigger
-    def trigger_push_notifications(self):
-        json_data = request.get_json()
-        subscriptions = self.PushSubscription.query.all()
-        results = trigger_push_notifications_for_subscriptions(
-            subscriptions,
-            json_data.get('title'),
-            json_data.get('body')
-        )
-        return jsonify({"status": "success", "result": results})
-
-    # Test route
-    def info(self):
-        return f"Hello! {len(self.message_log)} messages received so far."
+    def _add_extra_routes(self):
+        @self.app.route('/info')
+        def info():
+            return f"Hello! {len(self.message_log)} messages received so far."
 
     def run(self, **kwargs):
         self.app.run(**kwargs)
 
     def init_executables(self):
         # Get all possible executables
-        executables = getClassesWithRoutes("webserver/services/executables")
+        executables = getClassesWithRules("webserver/services/executables", ["route", "scheduled_task", "server_function"])
         # Now add them to the app
-        for file, class_name, method_name in executables:
-            module_name = file.replace("/", ".").replace(".py", "")
+        for classKind in executables:
+            module_name = classKind["path"].replace("/", ".").replace(".py", "")
             module = import_module(module_name)
-            cls = getattr(module, class_name)
+            cls = getattr(module, classKind["moduleName"])
             instance = cls()
-            route_info = getattr(instance, method_name)._route_info
-            self.app.add_url_rule(route_info["rule"], view_func=getattr(instance, method_name), methods=route_info["methods"])
+            for function in classKind["functions"]:
+                method_name = function["function"]
+                rule = function["rule"]
+                if rule == "route":
+                    self.app.add_url_rule(function["args"]["rule"], view_func=getattr(instance, method_name),
+                                          methods=function["args"]["methods"] if "methods" in function["args"] else ["GET"])
+                elif rule == "scheduled_task":
+                    # Handle scheduled tasks if needed
+                    self.scheduled_functions.append({
+                        "functionObject": getattr(instance, method_name),
+                        "interval": function["args"]["interval"],
+                    })
+                elif rule == "server_function":
+                    self.managers_functions[method_name] = {
+                        "functionObject": getattr(instance, method_name),
+                        "instance": instance
+                    }
 
 
 
