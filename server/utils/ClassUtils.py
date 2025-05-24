@@ -1,4 +1,4 @@
-import server.utils.PathUtils as pathUtils
+import utils.PathUtils as pathUtils
 from ast import FunctionDef
 
 def getValue(value):
