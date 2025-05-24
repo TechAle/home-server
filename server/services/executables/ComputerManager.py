@@ -6,7 +6,7 @@ import requests
 import psutil
 from subprocess import PIPE, Popen
 
-from server.services.Routes import route
+from services.Routes import route
 
 
 class computerManager:
