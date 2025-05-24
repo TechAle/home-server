@@ -163,7 +163,7 @@ class analistManager:
 
         for anime in to_watch:
             for idx, link in enumerate(to_watch[anime]["link"]):
-                newLinkGet = f"{link.replace('https://www.anisaturn.com/anime/', 'https://www.anisaturn.com/episode/')}-ep-{to_watch[anime]["progress"]}"
+                newLinkGet = f"{link.replace('https://www.anisaturn.com/anime/', 'https://www.anisaturn.com/episode/')}-ep-{to_watch[anime]['progress']}"
                 response = requests.get(newLinkGet)
                 if response.status_code == 200:
                     data = response.text
