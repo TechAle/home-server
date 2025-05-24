@@ -36,7 +36,7 @@ class MyFlaskApp:
         return decorator
 
     def my_minute_task(self):
-        print("Background task running...")
+        pass
 
     def register_scheduled_tasks(self):
         self.scheduled_task(interval=10)(self.my_minute_task)
