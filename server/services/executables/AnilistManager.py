@@ -4,7 +4,7 @@ import urllib
 import requests
 import webbrowser
 
-from server.services.Routes import route
+from services.Routes import route
 
 
 class analistManager:
