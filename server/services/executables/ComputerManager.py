@@ -1,7 +1,6 @@
 import os
 import platform
 import socket
-import subprocess
 
 import requests
 import psutil
