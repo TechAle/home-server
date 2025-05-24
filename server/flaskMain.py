@@ -11,6 +11,7 @@ from utils.ClassUtils import getClassesWithRules
 class MyFlaskApp:
     def __init__(self):
         self.app = Flask(__name__, template_folder="templates/")
+        self.app.config["SERVER_NAME"] = "0.0.0.0:5000"
 
         self.managers_functions = {}
         self.scheduled_functions = []
