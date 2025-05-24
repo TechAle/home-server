@@ -1,4 +1,4 @@
-from webserver.services.executables.ComputerManager import computerManager
+from server.services.executables.ComputerManager import computerManager
 
 manager = computerManager()
 

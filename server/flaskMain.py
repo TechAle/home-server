@@ -5,12 +5,12 @@ from importlib import import_module
 
 from flask import Flask, render_template
 
-from webserver.utils.ClassUtils import getClassesWithRules
+from server.utils.ClassUtils import getClassesWithRules
 
 
 class MyFlaskApp:
     def __init__(self):
-        self.app = Flask(__name__, instance_relative_config=True)
+        self.app = Flask(__name__, template_folder="templates/")
 
         self.managers_functions = {}
         self.scheduled_functions = []
@@ -61,15 +61,15 @@ class MyFlaskApp:
     def _add_html_routes(self):
         @self.app.route("/")
         def home_page():
-            return render_template("webserver/templates/index.html")
+            return render_template("index.html")
 
         @self.app.route("/unsubscribe")
         def unsubscribe_page():
-            return render_template("webserver/templates/unsubscribe.html")
+            return render_template("unsubscribe.html")
 
         @self.app.route("/admin")
         def admin_page():
-            return render_template("webserver/templates/admin.html")
+            return render_template("admin.html")
 
 
     def _add_extra_routes(self):
@@ -82,7 +82,7 @@ class MyFlaskApp:
 
     def init_executables(self):
         # Get all possible executables
-        executables = getClassesWithRules("webserver/services/executables", ["route", "scheduled_task", "server_function"])
+        executables = getClassesWithRules("services/executables", ["route", "scheduled_task", "server_function"])
         # Now add them to the app
         for classKind in executables:
             module_name = classKind["path"].replace("/", ".").replace(".py", "")
