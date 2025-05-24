@@ -23,7 +23,7 @@ def getClasses(file):
 def getClassesWithRules(path, rules):
     # noinspection PyUnresolvedReferences
     functions_classes = [
-        (file, class_name, element.name, decorator.func.id, decorator.keywords)
+        (file, class_name, element.name, decorator.func.id, decorator.keywords, decorator.args)
         for file in pathUtils.getAllPythonFromPath(path)
         for node, class_name in getClasses(file)
         for element in node.body
@@ -36,7 +36,7 @@ def getClassesWithRules(path, rules):
     final_result = {}
 
     # Loop through each tuple to construct the dictionary
-    for path, moduleName, function, rule, args in functions_classes:
+    for path, moduleName, function, rule, args, implicit_args in functions_classes:
         if path not in final_result:
             final_result[path] = {
                 "path": path,
@@ -44,7 +44,11 @@ def getClassesWithRules(path, rules):
                 "functions": []
             }
         argsNew = {x.arg: getValue(x.value) for x in args}
-        final_result[path]["functions"].append({"function": function, "rule": rule, "args": argsNew})
+        if len(implicit_args) != 0:
+            argsNew["url"] = getValue(implicit_args[0])
+        final_result[path]["functions"].append({
+            "function": function,
+            "rule": rule, "args": argsNew})
 
     # Convert the dictionary values to a list
     return list(final_result.values())

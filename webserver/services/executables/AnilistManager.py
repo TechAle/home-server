@@ -4,6 +4,8 @@ import urllib
 import requests
 import webbrowser
 
+from webserver.services.Routes import route
+
 
 class analistManager:
     def __init__(self, configurationPath: str = "configuration.json"):
@@ -133,6 +135,7 @@ class analistManager:
         response = self.execute_query(query, variables)
         return response["data"]["MediaListCollection"]["lists"][0]["entries"]
 
+    @route("/get_anime", methods=["GET"])
     def get_to_watch(self):
         watching = self.get_watching_anime()
         to_watch = {}

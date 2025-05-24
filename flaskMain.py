@@ -93,7 +93,7 @@ class MyFlaskApp:
                 method_name = function["function"]
                 rule = function["rule"]
                 if rule == "route":
-                    self.app.add_url_rule(function["args"]["rule"], view_func=getattr(instance, method_name),
+                    self.app.add_url_rule(function["args"]["url"], view_func=getattr(instance, method_name),
                                           methods=function["args"]["methods"] if "methods" in function["args"] else ["GET"])
                 elif rule == "scheduled_task":
                     # Handle scheduled tasks if needed
