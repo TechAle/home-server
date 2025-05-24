@@ -5,7 +5,7 @@ from importlib import import_module
 
 from flask import Flask, render_template
 
-from server.utils.ClassUtils import getClassesWithRules
+from utils.ClassUtils import getClassesWithRules
 
 
 class MyFlaskApp:
