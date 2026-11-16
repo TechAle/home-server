@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# JetBrains IDEs (run configurations live in .run/ and are shared)
+.idea/
+*.iml
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# React Native build artifacts (see also client/.gitignore)
+client/ios/Pods/
+client/macos/Pods/
+client/vendor/
+client/ios/build/
+client/macos/build/
+client/android/build/
+client/android/app/build/

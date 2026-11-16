@@ -1,10 +1,27 @@
 import json
+import os
 import urllib
+from pathlib import Path
 
 import requests
 import webbrowser
+from dotenv import load_dotenv
 
 from services.Routes import route
+
+# server/.env, loaded regardless of the current working directory.
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(ENV_FILE)
+
+
+def require_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"Missing environment variable {name}. "
+            f"Copy server/.env.example to server/.env and fill in the value."
+        )
+    return value
 
 
 class analistManager:
@@ -19,9 +36,8 @@ class analistManager:
         self.redirectUri: str = ""
         self.currentId: int = -1
         self.configurate(configurationPath)
-        # bot.auth()
-        # print(bot.getAccessToken())
-        self.accessToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6Ijc2YjBmMmU5YWIzMzU0NWIxMjFjY2I4MjUyYTMyMWIyNTQxOGNjZTA4NmU3YmQ5MWYzOTQ0Yzk4NzBlYmI1Nzc4Mzg0NjcxZDUwZDdlYTI2In0.eyJhdWQiOiIyNjYyOSIsImp0aSI6Ijc2YjBmMmU5YWIzMzU0NWIxMjFjY2I4MjUyYTMyMWIyNTQxOGNjZTA4NmU3YmQ5MWYzOTQ0Yzk4NzBlYmI1Nzc4Mzg0NjcxZDUwZDdlYTI2IiwiaWF0IjoxNzQ2NTI2NDQwLCJuYmYiOjE3NDY1MjY0NDAsImV4cCI6MTc3ODA2MjQ0MCwic3ViIjoiNzMxMzI5MSIsInNjb3BlcyI6W119.YiC4KcasBcLyYzeb2wGW-Xo_ta2G4IgfwXLnsMRm3W_XIjbHae1_2NEeB03jMKT7DKdMk8STW4nYWN7jvs7UKEViKskO5TtMvS5R703f47R_3xZBmV9cdfd4wHI-hc2UMFOL4Uvtb6m9QUkHVRkX1-fxXK22Zn2Rvu90-GaTQh9pHytdEqbWWJ_MEHNdqXjXWYdrfGmhMPgAxDHQspbwUbFIdGISaZi-ooB5Oa7AmAQ32YJO-LY9CQRazgnyHS2k1FRn9EPJpMkLEkTKe_-3QcpmLSY-UNyhmIFLLxEN1347rddwmKiFsKux2QTvivlgNwNFEOLWxHOiRvGNwQR_Ut6MZjN7ssiRCMeh8mRCRhgiim05UcQTs2O0OBu7jhV0MuvUXp99fpLlgCN5aPAf9J1bQBwYnot3qC_iCBW7Y-BOEnxS1q2sF47r5369ADTK1-ODB4m332El4PepKRsq745Azb2EdtuhnpWtOeJzdyyZXiWScfZY3DFBZAGonrf17kuLP3DuLe_GxSjMdn6jSB6zrf1kNmryc_B7P5FiVkJISJCtPMG0u0Ozxg1chMGLCxc4p-rd-uI73UGSXftx54PBPSbU3kwdxVkajkEKo7n1Ej0slT29ru4mg-zN47318DOvs3vH0hED50rnTHAbW5BPwGfFL6putjAUtxt3urg"
+        # OAuth tokens are secrets: they live in server/.env, never in the repository.
+        self.accessToken = require_env("ANILIST_ACCESS_TOKEN")
         self.get_current_user()
 
     def configurate(self, configurationPath):
@@ -29,7 +45,7 @@ class analistManager:
             config = json.load(file)
             self.apiAniList = config["anilist"]["api"]
             self.clientId = config["anilist"]["clientId"]
-            self.clientSecret = config["anilist"]["clientSecret"]
+            self.clientSecret = require_env("ANILIST_CLIENT_SECRET")
             self.redirectUri = config["anilist"]["redirectUri"]
 
     def auth(self):

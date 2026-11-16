@@ -1,4 +1,7 @@
-from server.services.executables.ComputerManager import computerManager
+# Utility script: prints local computer and system resource info.
+# Run from the server/ directory: python check_computer.py
+
+from services.executables.ComputerManager import computerManager
 
 manager = computerManager()
 
