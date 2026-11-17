@@ -18,7 +18,7 @@ In alternativa è sufficiente aprire `index.html` nel browser.
 
 ## Cosa include
 
-- **Login notturno** con sfondo animato Vanta NET e campo password con toggle
+- **Login giorno/notte**: cielo animato Vanta con stelle in tema scuro, cielo chiaro in tema chiaro
 - **Dashboard** con lo stato dei servizi: Raspberry Pi, AniList, File Server, Media, Backup
 - **Dettaglio servizio con tab**: All / sezioni specifiche
 - **Raspberry Pi**: metriche live, grafico CPU, soglia ventola, toggle, riavvio/spegnimento
@@ -27,7 +27,8 @@ In alternativa è sufficiente aprire `index.html` nel browser.
 - **Media**: galleria con ricerca, filtri, paginazione ed empty state
 - **Backup**: pianificazione, retention, esecuzione con progress bar
 - **Dialog riusabile** con stati loading → successo / errore
-- **Tema chiaro/scuro** della home (sole → luna), salvato in `localStorage`
+- **Tema chiaro/scuro** della home e del login (sole → luna), salvato in `localStorage`
+- **Nuvole-particella** animate nel tema chiaro (home e login): dimensioni, velocità e profondità diverse
 - **Responsive**: drawer laterale con hamburger sotto i 900 px
 
 ## Dipendenze esterne

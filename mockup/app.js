@@ -92,6 +92,155 @@ const esc = (value) =>
     (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
   );
 
+/* Nuvole-particella: posizioni, velocità e leggero bobbing gestiti in JS. */
+const cloudFields = [];
+const CLOUD_REDUCED = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+let cloudRaf = null;
+
+function makeCloudParticle(
+  width,
+  height,
+  { yMax = 0.28, sizeMin = 110, sizeMax = 300, opacityMin = 0.45, opacityMax = 0.85, blurMin = 6, blurMax = 12 } = {}
+) {
+  const size = sizeMin + Math.random() * (sizeMax - sizeMin);
+  const el = document.createElement("span");
+  el.className = "cloud-particle";
+  el.style.width = `${size.toFixed(0)}px`;
+  el.style.height = `${(size * (0.26 + Math.random() * 0.1)).toFixed(0)}px`;
+  el.style.opacity = (opacityMin + Math.random() * (opacityMax - opacityMin)).toFixed(2);
+  el.style.filter = `blur(${(blurMin + Math.random() * (blurMax - blurMin)).toFixed(1)}px)`;
+
+  return {
+    el,
+    x: Math.random() * width,
+    y: height * (0.03 + Math.random() * (yMax - 0.03)),
+    size,
+    speed: 6 + Math.random() * 14,
+    bob: Math.random() * Math.PI * 2,
+    bobSpeed: 0.15 + Math.random() * 0.3,
+    bobAmount: 4 + Math.random() * 7,
+  };
+}
+
+function createCloudField(layer, options = {}) {
+  const { count = 10, yMax = 0.28 } = options;
+  const opacityMin = options.opacityMin ?? 0.45;
+  const opacityMax = options.opacityMax ?? 0.85;
+
+  layer.innerHTML = "";
+
+  const field = {
+    layer,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    yMax,
+    opacityMin,
+    opacityMax,
+    particles: [],
+  };
+
+  for (let index = 0; index < count; index += 1) {
+    const particle = makeCloudParticle(field.width, field.height, options);
+    field.particles.push(particle);
+    layer.appendChild(particle.el);
+  }
+
+  return field;
+}
+
+function drawClouds(field, dt = 0) {
+  const { width, height, yMax, opacityMin, opacityMax, particles } = field;
+
+  particles.forEach((particle) => {
+    if (dt) {
+      particle.x += particle.speed * dt;
+      particle.bob += particle.bobSpeed * dt;
+
+      if (particle.x > width + particle.size) {
+        particle.x = -particle.size - Math.random() * 120;
+        particle.y = height * (0.03 + Math.random() * (yMax - 0.03));
+        particle.speed = 6 + Math.random() * 14;
+        particle.el.style.opacity = (opacityMin + Math.random() * (opacityMax - opacityMin)).toFixed(2);
+      }
+    }
+
+    const bobY = Math.sin(particle.bob) * particle.bobAmount;
+    particle.el.style.transform = `translate3d(${particle.x.toFixed(1)}px, ${(
+      particle.y + bobY
+    ).toFixed(1)}px, 0)`;
+  });
+}
+
+function createCloudParticles() {
+  cloudFields.length = 0;
+  const mobile = window.innerWidth < 640;
+
+  const homeLayer = $("#cloud-layer");
+  if (homeLayer) {
+    cloudFields.push(
+      createCloudField(homeLayer, {
+        count: mobile ? 8 : 12,
+        yMax: 0.3,
+        sizeMin: 120,
+        sizeMax: 330,
+        opacityMin: 0.55,
+        opacityMax: 0.95,
+        blurMin: 5,
+        blurMax: 10,
+      })
+    );
+  }
+
+  const loginLayer = $("#login-cloud-layer");
+  if (loginLayer) {
+    cloudFields.push(
+      createCloudField(loginLayer, {
+        count: mobile ? 7 : 12,
+        yMax: 0.5,
+        sizeMin: 140,
+        sizeMax: 340,
+        opacityMin: 0.6,
+        opacityMax: 1,
+        blurMin: 5,
+        blurMax: 10,
+      })
+    );
+  }
+
+  cloudFields.forEach((field) => drawClouds(field, 0));
+  startCloudLoop();
+}
+
+function startCloudLoop() {
+  if (cloudRaf || CLOUD_REDUCED) return;
+
+  let last = performance.now();
+
+  const step = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (document.documentElement.dataset.theme !== "dark" && !document.hidden) {
+      cloudFields.forEach((field) => {
+        const screen = field.layer.closest(".screen");
+        if (screen && !screen.classList.contains("is-active")) return;
+        drawClouds(field, dt);
+      });
+    }
+
+    cloudRaf = window.requestAnimationFrame(step);
+  };
+
+  cloudRaf = window.requestAnimationFrame(step);
+}
+
+window.addEventListener("resize", () => {
+  cloudFields.forEach((field) => {
+    field.width = window.innerWidth;
+    field.height = window.innerHeight;
+  });
+});
+
 function formatUptime(totalSeconds) {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
@@ -164,6 +313,25 @@ function destroyNightBackground() {
   if (el) el.classList.remove("is-fallback");
 }
 
+// L'effetto Vanta serve solo al login in tema scuro.
+let nightDestroyTimer = null;
+
+function syncNightBackground() {
+  const login = $("#screen-login");
+  const loginVisible = login?.classList.contains("is-active");
+  const dark = document.documentElement.dataset.theme === "dark";
+
+  window.clearTimeout(nightDestroyTimer);
+  nightDestroyTimer = null;
+
+  if (loginVisible && dark) {
+    initNightBackground();
+  } else {
+    // lascia finire il fade del tema prima di rimuovere il canvas
+    nightDestroyTimer = window.setTimeout(destroyNightBackground, 700);
+  }
+}
+
 /* ------------------------------------------------------------
    Schermate e login
    ------------------------------------------------------------ */
@@ -174,7 +342,7 @@ function showScreen(id) {
 
   if (id === "screen-login") {
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(initNightBackground);
+      window.requestAnimationFrame(syncNightBackground);
     });
   } else {
     destroyNightBackground();
@@ -218,7 +386,7 @@ loginForm.addEventListener("submit", (event) => {
     passwordInput.value = "";
     showScreen("screen-home");
     startDashboard();
-    showView("dashboard");
+    showView("dashboard", "all", { skeleton: true });
   }, 450);
 });
 
@@ -226,6 +394,13 @@ $("#logout").addEventListener("click", () => {
   stopDashboard();
   showScreen("screen-login");
   window.setTimeout(() => passwordInput.focus(), 250);
+});
+
+$("#refresh-view").addEventListener("click", () => {
+  const button = $("#refresh-view");
+  button.classList.add("is-spinning");
+  showView(currentView, currentTab, { skeleton: true });
+  window.setTimeout(() => button.classList.remove("is-spinning"), 750);
 });
 
 /* ------------------------------------------------------------
@@ -316,18 +491,21 @@ function applyTheme(theme) {
     /* storage non disponibile: il tema vale solo per la sessione */
   }
 
-  const toggle = $("#theme-toggle");
-  if (toggle) {
-    const dark = theme === "dark";
+  const dark = theme === "dark";
+  $$("[data-theme-toggle]").forEach((toggle) => {
     toggle.setAttribute("aria-pressed", String(dark));
     toggle.setAttribute("aria-label", dark ? "Attiva tema chiaro" : "Attiva tema scuro");
-  }
+  });
+
+  syncNightBackground();
 }
 
 applyTheme(document.documentElement.dataset.theme || "light");
 
-$("#theme-toggle")?.addEventListener("click", () => {
-  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+$$("[data-theme-toggle]").forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
 });
 
 /* ------------------------------------------------------------
@@ -839,6 +1017,26 @@ function filesForm() {
     </article>`;
 }
 
+function sharesTable() {
+  return shares
+    .map(
+      (share, index) => `
+      <tr>
+        <td>${share.name}</td>
+        <td class="mono">${share.path}</td>
+        <td>${share.size}</td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" data-share-readonly="${index}" ${share.readonly ? "checked" : ""} />
+            <span class="track"></span>
+          </label>
+        </td>
+        <td><button class="btn-mini" data-share-delete="${index}">Rimuovi</button></td>
+      </tr>`
+    )
+    .join("");
+}
+
 function filesTable() {
   return `
     <article class="card">
@@ -865,6 +1063,7 @@ function mountFilesTab() {
     if (body) body.innerHTML = sharesTable();
     const count = $("#shares-count");
     if (count) count.textContent = `${shares.length} attive`;
+    decorateTables($("#tab-content") || document);
   };
 
   $("#share-form")?.addEventListener("submit", (event) => {
@@ -976,16 +1175,48 @@ function backupHistory() {
     </article>`;
 }
 
+function backupErrorBanner() {
+  return `
+    <div class="state state-error" id="backup-error" role="alert">
+      <span class="state-icon" aria-hidden="true">!</span>
+      <div class="state-body">
+        <strong>Ultimo backup non riuscito</strong>
+        <p>Spazio insufficiente su /mnt/usb. Nessun dato è stato perso.</p>
+      </div>
+      <button class="btn-plain" id="backup-retry">Riprova</button>
+    </div>`;
+}
+
 function renderBackupTab(tab) {
   if (tab === "schedule") return `${backupStats()}<div style="margin-top: 18px">${backupForm()}</div>`;
-  if (tab === "history") return backupHistory();
+  if (tab === "history") return `${backupErrorBanner()}${backupHistory()}`;
   return `
+    ${backupErrorBanner()}
     ${backupStats()}
     <div style="margin-top: 18px">${backupForm()}</div>
     <div style="margin-top: 18px">${backupHistory()}</div>`;
 }
 
 function mountBackupTab() {
+  $("#backup-retry")?.addEventListener("click", () => {
+    runActionModal({
+      title: "Nuovo tentativo di backup",
+      loadingText: "Copia dei dati su USB…",
+      successTitle: "Backup completato",
+      successText: "2.1 GB salvati in 4m 05s.",
+      errorTitle: "Backup non riuscito",
+      errorText: "Lo spazio su /mnt/usb è ancora insufficiente.",
+      outcome: "success",
+      onDone: (ok) => {
+        if (!ok) return;
+        $("#backup-error")?.remove();
+        const last = $("#backup-last");
+        if (last) last.textContent = "adesso";
+        showToast("Backup completato ✓");
+      },
+    });
+  });
+
   const retention = $("#retention");
   if (retention) {
     const out = $("#retention-out");
@@ -1558,6 +1789,49 @@ function tabsMarkup(service, activeTab) {
     </div>`;
 }
 
+function skeletonMarkup(isService) {
+  const card = `
+    <div class="card skeleton-card">
+      <span class="sk sk-line-sm"></span>
+      <span class="sk sk-line-lg"></span>
+      <span class="sk sk-block"></span>
+    </div>`;
+
+  if (isService) {
+    return `
+      <div class="detail-head">
+        <span class="sk" style="width: 110px; height: 32px"></span>
+        <span class="sk" style="width: 180px; height: 38px"></span>
+      </div>
+      <div class="skeleton-grid">${card.repeat(4)}</div>
+      <div class="card skeleton-card" style="margin-top: 18px">
+        <span class="sk sk-line-sm"></span>
+        <span class="sk sk-line-lg"></span>
+        <span class="sk sk-block" style="height: 120px"></span>
+      </div>`;
+  }
+
+  return `
+    <div class="skeleton-grid">${card.repeat(4)}</div>
+    <div class="card skeleton-card" style="margin-top: 18px">
+      <span class="sk sk-line-sm"></span>
+      <span class="sk sk-line-lg"></span>
+      <span class="sk sk-block" style="height: 90px"></span>
+    </div>`;
+}
+
+/* Copia le intestazioni della tabella nelle celle, per la vista a card su mobile. */
+function decorateTables(root = document) {
+  root.querySelectorAll("table").forEach((table) => {
+    const headers = [...table.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+    table.querySelectorAll("tbody tr").forEach((row) => {
+      [...row.children].forEach((cell, index) => {
+        cell.dataset.label = headers[index] ?? "";
+      });
+    });
+  });
+}
+
 function selectTab(tabId, { scroll = true } = {}) {
   const service = serviceById(currentView);
   if (!service) return;
@@ -1579,6 +1853,7 @@ function selectTab(tabId, { scroll = true } = {}) {
   content.onchange = null;
   content.innerHTML = service.renderTab(tabId);
   service.mountTab(tabId);
+  decorateTables(content);
 
   renderLive();
   renderChart();
@@ -1586,11 +1861,11 @@ function selectTab(tabId, { scroll = true } = {}) {
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function showView(id, tab = "all") {
+function showView(id, tab = "all", { skeleton = false } = {}) {
   if (id !== "dashboard" && !serviceById(id)) id = "dashboard";
 
   currentView = id;
-  currentTab = "all";
+  currentTab = tab;
   clearViewTimers();
 
   const service = serviceById(id);
@@ -1604,6 +1879,17 @@ function showView(id, tab = "all") {
   const root = $("#view-root");
   root.onclick = null;
   root.onkeydown = null;
+
+  if (skeleton) {
+    root.innerHTML = skeletonMarkup(Boolean(service));
+    closeDrawer();
+    window.setTimeout(() => {
+      if (currentView === id && $("#screen-home").classList.contains("is-active")) {
+        showView(id, tab);
+      }
+    }, 700);
+    return;
+  }
 
   if (!service) {
     root.innerHTML = renderDashboard();
@@ -1707,5 +1993,6 @@ function stopDashboard() {
    ------------------------------------------------------------ */
 
 renderNav();
-initNightBackground();
+createCloudParticles();
+syncNightBackground();
 passwordInput.focus();
