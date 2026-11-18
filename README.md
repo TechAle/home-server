@@ -5,28 +5,27 @@ Monorepo con due progetti:
 | Cartella | Stack | Descrizione |
 |---|---|---|
 | `client/` | React Native 0.79 (bare, TypeScript) | App per Android, iOS e macOS |
-| `server/` | Python + Flask | API e servizi (AniList, info macchina, ecc.) |
+| `server/` | Node.js (Express) | API e servizi (AniList, info macchina, ecc.) |
 
 ## Prerequisiti
 
-- Node.js >= 18 e Yarn
+- Node.js >= 18 (npm per il server, Yarn per il client)
 - Xcode + CocoaPods (iOS/macOS)
 - Android SDK con `ANDROID_HOME` impostato
-- Python 3 con `pip`
 
 ## Server
 
 ```sh
 cd server
-python3 -m pip install -r requirements.txt
+npm install
 
 # Solo la prima volta: crea il file dei segreti e compilalo
 cp .env.example .env
 
-python3 flaskMain.py   # oppure la run configuration "Server: Flask"
+npm start   # oppure la run configuration "Server: Node"
 ```
 
-Il server parte su `http://127.0.0.1:5000` con debug/reload attivo.
+Il server parte su `http://127.0.0.1:5000`. Per il reload automatico usa `npm run dev`.
 
 ### Variabili d'ambiente (`.env`)
 
@@ -36,10 +35,10 @@ versionato; `server/.env` è ignorato da git.
 | Variabile | Dove si trova |
 |---|---|
 | `ANILIST_CLIENT_SECRET` | <https://anilist.co/settings/developer> (si può rigenerare) |
-| `ANILIST_ACCESS_TOKEN` | Flusso OAuth (`AnilistManager.auth()`); dura circa un anno |
+| `ANILIST_ACCESS_TOKEN` | Flusso OAuth AniList (authorization code); dura circa un anno |
 
-Se una variabile manca, il server si ferma subito con un messaggio esplicito
-che indica di copiare `.env.example` in `.env`.
+Se il token manca, il server parte comunque: `/get_anime` risponde `503` con un
+messaggio che indica di copiare `.env.example` in `.env`.
 
 Le impostazioni non segrete (URL API, client ID, redirect URI) restano in
 `server/configuration.json`.

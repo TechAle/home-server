@@ -1,7 +1,7 @@
 {
   "anilist": {
     "api": "https://graphql.anilist.co",
-    "clientId": "26629",
-    "redirectUri": "https://localhost:8000"
+    "clientId": "57427",
+    "redirectUri": "http://localhost:8000"
   }
 }

@@ -1,0 +1,86 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import AnilistManager from "../src/services/executables/anilist-manager.js";
+
+test("getAnime keeps airing titles with link [] and a nextEpisode schedule", async (t) => {
+  const original = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = original;
+  });
+
+  const airingAt = 1795000000;
+  globalThis.fetch = async (url, options = {}) => {
+    const href = String(url);
+
+    if (href.includes("graphql.anilist.co")) {
+      const { query } = JSON.parse(options.body);
+      if (query.includes("Viewer")) {
+        return { ok: true, status: 200, json: async () => ({ data: { Viewer: { id: 1 } } }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            MediaListCollection: {
+              lists: [
+                {
+                  entries: [
+                    {
+                      progress: 6,
+                      media: {
+                        title: { english: "The World's Strongest Witch", romaji: "Sekai Saikyou no Majo" },
+                        startDate: { year: 2026 },
+                        nextAiringEpisode: { episode: 7, airingAt },
+                      },
+                    },
+                    {
+                      progress: 0,
+                      media: {
+                        title: { english: "Frieren: Beyond Journey's End", romaji: "Sousou no Frieren" },
+                        startDate: { year: 2023 },
+                        nextAiringEpisode: null,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        }),
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          results: [{ title: "Frieren: Beyond Journey's End", year: "2023", url: "/anime/frieren-QEd4Q" }],
+        }),
+    };
+  };
+
+  const manager = new AnilistManager();
+  manager.configure({ accessToken: "test-token" });
+  const toWatch = await manager.getAnime();
+
+  assert.deepEqual(Object.keys(toWatch).sort(), ["Frieren: Beyond Journey's End", "The World's Strongest Witch"]);
+  assert.deepEqual(toWatch["The World's Strongest Witch"], {
+    progress: 6,
+    link: [],
+    nextEpisode: { episode: 7, airingAt, airingAtIso: new Date(airingAt * 1000).toISOString() },
+  });
+  assert.deepEqual(toWatch["Frieren: Beyond Journey's End"], {
+    progress: 0,
+    link: ["https://www.animesaturn.net/anime/frieren-QEd4Q/ep-1"],
+    nextEpisode: null,
+  });
+});
+
+test("getAnime answers 503 without a token", async () => {
+  const manager = new AnilistManager();
+  manager.configure({ accessToken: "" });
+
+  await assert.rejects(manager.getAnime(), (error) => error.status === 503);
+});
