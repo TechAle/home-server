@@ -2,24 +2,50 @@
  * System metrics, without psutil:
  *   CPU temperature -> vcgencmd on Linux, sentinels elsewhere
  *   disk usage      -> fs.statfs
- *   CPU usage       -> two /proc-independent samples from node:os
+ *   CPU usage       -> two samples from node:os
  *
- * The -591/-590 sentinels are the Python project's, kept for API compatibility.
+ * The -591 / -590 sentinels are the Python project's, kept for API compatibility.
  */
 import { statfs } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
-import { UNAVAILABLE, isLinux, isMac, round } from "./platform.js";
+import { isLinux, isMac, round, UNAVAILABLE } from "./platform.js";
 
 const execFileAsync = promisify(execFile);
 
-export async function cpuTemperature() {
+export interface MemoryUsage {
+  total_memory: number;
+  used_memory: number;
+  free_memory: number;
+  memory_percent: number;
+}
+
+export interface DiskUsage {
+  total_gib: number;
+  used_gib: number;
+  free_gib: number;
+  percent_used: number;
+}
+
+export interface SystemResourceInfo {
+  cpu_temperature: number;
+  cpu_usage_percent: number;
+  ram: {
+    total_mib: number;
+    used_mib: number;
+    free_mib: number;
+    percent_used: number;
+  };
+  disk: DiskUsage;
+}
+
+export async function cpuTemperature(): Promise<number> {
   if (isLinux) {
     try {
       const { stdout } = await execFileAsync("/usr/bin/vcgencmd", ["measure_temp"]);
       const match = stdout.match(/=([\d.]+)/);
-      if (match) return Number(match[1]);
+      if (match?.[1]) return Number(match[1]);
     } catch {
       return -590;
     }
@@ -27,7 +53,7 @@ export async function cpuTemperature() {
   return isMac ? UNAVAILABLE : -590;
 }
 
-export async function memoryUsage() {
+export async function memoryUsage(): Promise<MemoryUsage> {
   if (isMac) {
     return {
       total_memory: UNAVAILABLE,
@@ -49,7 +75,7 @@ export async function memoryUsage() {
   };
 }
 
-export async function diskUsage(path = "/") {
+export async function diskUsage(path = "/"): Promise<DiskUsage> {
   const stats = await statfs(path);
   const total = stats.bsize * stats.blocks;
   const free = stats.bsize * stats.bavail;
@@ -64,7 +90,7 @@ export async function diskUsage(path = "/") {
 }
 
 /** CPU usage sampled over a short window, since Node has no psutil equivalent. */
-export function cpuUsage(sampleMs = 100) {
+export function cpuUsage(sampleMs = 100): Promise<number> {
   const start = snapshotCpu();
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -72,12 +98,17 @@ export function cpuUsage(sampleMs = 100) {
       const idle = end.idle - start.idle;
       const total = end.total - start.total;
       resolve(total > 0 ? round((1 - idle / total) * 100) : 0);
-    }, sampleMs).unref?.();
+    }, sampleMs).unref();
   });
 }
 
-function snapshotCpu() {
-  return os.cpus().reduce(
+interface CpuSnapshot {
+  idle: number;
+  total: number;
+}
+
+function snapshotCpu(): CpuSnapshot {
+  return os.cpus().reduce<CpuSnapshot>(
     (acc, cpu) => {
       const times = Object.values(cpu.times).reduce((sum, value) => sum + value, 0);
       acc.total += times;
@@ -88,13 +119,23 @@ function snapshotCpu() {
   );
 }
 
-export async function systemResourceInfo() {
+export async function systemResourceInfo(): Promise<SystemResourceInfo> {
   if (isMac) {
     return {
       cpu_temperature: UNAVAILABLE,
       cpu_usage_percent: UNAVAILABLE,
-      ram: { total_mib: UNAVAILABLE, used_mib: UNAVAILABLE, free_mib: UNAVAILABLE, percent_used: UNAVAILABLE },
-      disk: { total_gib: UNAVAILABLE, used_gib: UNAVAILABLE, free_gib: UNAVAILABLE, percent_used: UNAVAILABLE },
+      ram: {
+        total_mib: UNAVAILABLE,
+        used_mib: UNAVAILABLE,
+        free_mib: UNAVAILABLE,
+        percent_used: UNAVAILABLE,
+      },
+      disk: {
+        total_gib: UNAVAILABLE,
+        used_gib: UNAVAILABLE,
+        free_gib: UNAVAILABLE,
+        percent_used: UNAVAILABLE,
+      },
     };
   }
 

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Server: Node" type="NodeJSConfigurationType" path-to-node="project" path-to-js-file="src/index.js" working-dir="$PROJECT_DIR$/server">
+  <configuration default="false" name="Server: Node" type="NodeJSConfigurationType" path-to-node="project" path-to-js-file="src/index.ts" node-parameters="--import tsx" working-dir="$PROJECT_DIR$/server">
     <envs>
       <env name="PORT" value="5000" />
     </envs>

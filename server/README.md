@@ -4,18 +4,22 @@ Node.js backend for the Home Server. Services declare their own routes,
 scheduled tasks and server functions, and the server discovers them at boot
 without a central list.
 
+TypeScript sources in `src/`, compiled to `dist/` with `tsc`.
+
 ```sh
 npm install
-npm start          # http://0.0.0.0:5000
-npm run dev        # same, with --watch
-npm test           # node:test, no extra dependencies
+npm run dev        # tsx watch, http://0.0.0.0:5000
+npm run typecheck  # tsc --noEmit
+npm test           # node:test via tsx
+npm run build      # tsc -> dist/
+npm start          # runs the built dist/
 ```
 
 ## Debug in WebStorm
 
 Two shared run configurations live in the repository root (`.run/`):
 
-- **Server: Node** — runs `src/index.js` from `server/` with `PORT=5000`.
+- **Server: Node** — runs `src/index.ts` from `server/` (`node --import tsx`) with `PORT=5000`.
   Press **Debug** instead of **Run** to start it with the inspector attached:
   breakpoints in `src/**` work out of the box, including inside the service
   classes loaded dynamically.
@@ -32,23 +36,24 @@ Environment and configuration live next to the code:
 
 | Python | Node |
 | --- | --- |
-| `flaskMain.py` (`MyFlaskApp`) | `src/app.js` (`createApp`) + `src/index.js` |
-| `utils/ClassUtils.py` (AST scan) | `src/loader.js` (directory scan + `import()`) |
-| `utils/PathUtils.py` | `readdir` inside `src/loader.js` |
-| `services/Routes.py` | `route()` in `src/rules.js` |
-| `services/Scheduled_Task.py` | `scheduledTask()` in `src/rules.js` |
-| `services/Server_Function.py` | `serverFunction()` in `src/rules.js` |
-| `managers_functions` / scheduler threads | `src/registry.js` |
-| `services/executables/ComputerManager.py` | `src/services/executables/computer-manager.js` |
-| `services/executables/AnilistManager.py` | `src/services/executables/anilist-manager.js` |
+| `flaskMain.py` (`MyFlaskApp`) | `src/app.ts` (`createApp`) + `src/index.ts` |
+| `utils/ClassUtils.py` (AST scan) | `src/loader.ts` (directory scan + `import()`) |
+| `utils/PathUtils.py` | `readdir` inside `src/loader.ts` |
+| `services/Routes.py` | `route()` in `src/rules.ts` |
+| `services/Scheduled_Task.py` | `scheduledTask()` in `src/rules.ts` |
+| `services/Server_Function.py` | `serverFunction()` in `src/rules.ts` |
+| `managers_functions` / scheduler threads | `src/registry.ts` |
+| `services/executables/ComputerManager.py` | `src/services/executables/computer-manager.ts` |
+| `services/executables/AnilistManager.py` | `src/services/executables/anilist-manager.ts` |
 
 ## The core difference
 
 The Flask version read each file with `ast` and found decorated methods **before**
 importing the module. JavaScript cannot inspect exports without importing, so the
 loader
-walks `src/services/executables`, imports every `.js` file, instantiates its
-default class and reads the metadata that the decorators stamped on each handler:
+walks `src/services/executables`, imports every module (`.ts` in development,
+`.js` in `dist/`), instantiates its default class and reads the metadata that the
+decorators stamped on each handler:
 
 ```js
 export default class ComputerManager {
@@ -59,21 +64,21 @@ export default class ComputerManager {
 Adding a service = drop a file into `src/services/executables`. Nothing else to
 register.
 
-Only the adapter goes in `executables/`: the loader instantiates every `.js`
-file there (no subdirectories, and `_`-prefixed files are skipped), so pure
-logic lives in `src/services/<domain>/` and is never instantiated.
+Only the adapter goes in `executables/`: the loader instantiates every module
+there (no subdirectories, and `_`-prefixed files are skipped), so pure logic
+lives in `src/services/<domain>/` and is never instantiated.
 
 | File | Role |
 | --- | --- |
-| `src/services/executables/anilist-manager.js` | class + `/get_anime` route (the only AniList file the loader sees) |
-| `src/services/anilist/client.js` | `createAniListClient()`: viewer id, watching list |
-| `src/services/anilist/links.js` | AniSaturn search, matching, `nextEpisodeLink()`, cache and pacing |
-| `src/services/anilist/next-episode.js` | `nextEpisodeState()`: waiting + `nextEpisode` schedule |
-| `src/services/anilist/queries.js` | GraphQL documents |
-| `src/services/executables/computer-manager.js` | class + the four metrics routes |
-| `src/services/computer/info.js` | `/get_computer_info` payload |
-| `src/services/computer/metrics.js` | temperature, memory, disk, CPU, resource summary |
-| `src/services/computer/platform.js` | `-591`/`-590` sentinels and OS helpers |
+| `src/services/executables/anilist-manager.ts` | class + `/get_anime` route (the only AniList file the loader sees) |
+| `src/services/anilist/client.ts` | `createAniListClient()`: viewer id, watching list |
+| `src/services/anilist/links.ts` | AniSaturn search, matching, `nextEpisodeLink()`, cache and pacing |
+| `src/services/anilist/next-episode.ts` | `nextEpisodeState()`: waiting + `nextEpisode` schedule |
+| `src/services/anilist/queries.ts` | GraphQL documents |
+| `src/services/executables/computer-manager.ts` | class + the four metrics routes |
+| `src/services/computer/info.ts` | `/get_computer_info` payload |
+| `src/services/computer/metrics.ts` | temperature, memory, disk, CPU, resource summary |
+| `src/services/computer/platform.ts` | `-591`/`-590` sentinels and OS helpers |
 
 Factories (`createAniListClient`, `createAnisaturnResolver`) accept
 `fetchImpl`/cache options, so the tests inject a fake `fetch` instead of
@@ -141,3 +146,13 @@ the next airing episode is `progress + 1` (the last one is already watched),
 | GET | `/get_memory_usage` | ComputerManager |
 | GET | `/get_system_resource_info` | ComputerManager |
 | GET | `/get_anime` | AnilistManager |
+
+## TypeScript
+
+Everything under `src/` is TypeScript with `strict` enabled; there is no
+JavaScript source left. `tsx` runs the sources in development, `npm run build`
+emits `dist/*.js`, and the loader accepts both extensions so the same code boots
+from either place.
+
+`npm run typecheck` checks `src/` only; tests run through `tsx`, which strips
+types without type-checking them.

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import AnilistManager from "../src/services/executables/anilist-manager.js";
+import AnilistManager, { type ToWatch } from "../src/services/executables/anilist-manager.js";
 
 test("getAnime keeps airing titles with link [] and a nextEpisode schedule", async (t) => {
   const original = globalThis.fetch;
@@ -9,11 +9,12 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
   });
 
   const airingAt = 1795000000;
-  globalThis.fetch = async (url, options = {}) => {
-    const href = String(url);
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const href = String(input);
 
     if (href.includes("graphql.anilist.co")) {
-      const { query } = JSON.parse(options.body);
+      const { query } = JSON.parse(String(init?.body)) as { query: string };
       if (query.includes("Viewer")) {
         return { ok: true, status: 200, json: async () => ({ data: { Viewer: { id: 1 } } }) };
       }
@@ -59,13 +60,16 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
           results: [{ title: "Frieren: Beyond Journey's End", year: "2023", url: "/anime/frieren-QEd4Q" }],
         }),
     };
-  };
+  }) as unknown as typeof fetch;
 
   const manager = new AnilistManager();
   manager.configure({ accessToken: "test-token" });
-  const toWatch = await manager.getAnime();
+  const toWatch = await (manager.getAnime as unknown as () => Promise<ToWatch>)();
 
-  assert.deepEqual(Object.keys(toWatch).sort(), ["Frieren: Beyond Journey's End", "The World's Strongest Witch"]);
+  assert.deepEqual(Object.keys(toWatch).sort(), [
+    "Frieren: Beyond Journey's End",
+    "The World's Strongest Witch",
+  ]);
   assert.deepEqual(toWatch["The World's Strongest Witch"], {
     progress: 6,
     link: [],
@@ -82,5 +86,8 @@ test("getAnime answers 503 without a token", async () => {
   const manager = new AnilistManager();
   manager.configure({ accessToken: "" });
 
-  await assert.rejects(manager.getAnime(), (error) => error.status === 503);
+  await assert.rejects(
+    (manager.getAnime as unknown as () => Promise<unknown>)(),
+    (error: { status?: number }) => error.status === 503,
+  );
 });

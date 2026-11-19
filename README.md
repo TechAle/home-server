@@ -5,7 +5,7 @@ Monorepo con due progetti:
 | Cartella | Stack | Descrizione |
 |---|---|---|
 | `client/` | React Native 0.79 (bare, TypeScript) | App per Android, iOS e macOS |
-| `server/` | Node.js (Express) | API e servizi (AniList, info macchina, ecc.) |
+| `server/` | Node.js + TypeScript (Express) | API e servizi (AniList, info macchina, ecc.) |
 
 ## Prerequisiti
 
@@ -18,6 +18,7 @@ Monorepo con due progetti:
 ```sh
 cd server
 npm install
+npm run build
 
 # Solo la prima volta: crea il file dei segreti e compilalo
 cp .env.example .env

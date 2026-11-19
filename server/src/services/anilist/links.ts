@@ -15,8 +15,52 @@ const USER_AGENT =
 const REQUEST_SPACING_MS = 300;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+/** One entry of `GET /api/search?q=…`. */
+export interface AnimeSearchResult {
+  title?: string | null;
+  url?: string | null;
+  year?: string | number | null;
+}
+
+/** Minimal `fetch` surface, so tests can inject a fake easily. */
+export interface FetchResponseLike {
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+}
+
+export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<FetchResponseLike>;
+
+export interface AnisaturnResolverOptions {
+  baseUrl?: string;
+  spacingMs?: number;
+  cacheTtlMs?: number;
+  fetchImpl?: FetchLike;
+}
+
+export interface AnisaturnResolver {
+  search(query: string): Promise<AnimeSearchResult[]>;
+  episodeLink(title: string, progress: number, year?: number | null): Promise<string[]>;
+}
+
+interface CacheEntry {
+  at: number;
+  results: AnimeSearchResult[];
+}
+
+function httpError(message: string, status: number): Error & { status: number } {
+  return Object.assign(new Error(message), { status });
+}
+
+function toResults(value: unknown): AnimeSearchResult[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is AnimeSearchResult => typeof item === "object" && item !== null,
+  );
+}
+
 /** Lowercase, strip punctuation: "Re:Zero 2" -> "re zero 2". */
-export function normalizeTitle(value) {
+export function normalizeTitle(value: unknown): string {
   return String(value ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
@@ -24,13 +68,13 @@ export function normalizeTitle(value) {
 }
 
 /** "/anime/jujutsu-kaisen-2rgk6" -> "jujutsu-kaisen-2rgk6". */
-export function animeIdFrom(result) {
+export function animeIdFrom(result?: AnimeSearchResult | null): string {
   const match = /^\/anime\/([^/?#]+)/.exec(result?.url ?? "");
   return match ? match[1] : "";
 }
 
 /** `https://www.animesaturn.net/anime/{id}/ep-{episode}`. */
-export function anisaturnEpisodeUrl(animeId, episode) {
+export function anisaturnEpisodeUrl(animeId: string, episode: number): string {
   return `${ANISATURN_URL}/anime/${animeId}/ep-${episode}`;
 }
 
@@ -39,27 +83,27 @@ export function anisaturnEpisodeUrl(animeId, episode) {
  * the title with the season word removed ("... Season 4" -> "... 4"), and the
  * main title before the first colon.
  */
-export function searchQueries(title) {
-  const queries = [];
-  const add = (value) => {
-    const text = String(value ?? "").trim();
+export function searchQueries(title: string): string[] {
+  const queries: string[] = [];
+  const add = (value: string): void => {
+    const text = value.trim();
     const key = normalizeTitle(text);
     if (key && !queries.some((item) => normalizeTitle(item) === key)) queries.push(text);
   };
 
   add(title);
   add(
-    String(title ?? "")
+    title
       .replace(/\b(?:Season|Cour|Cours|Part)\s+(\d+)/gi, "$1")
       .replace(/\b(\d+)(?:st|nd|rd|th)\s+Season\b/gi, "$1"),
   );
-  add(String(title ?? "").split(":")[0]);
+  add(title.split(":")[0]);
 
   return queries;
 }
 
-function hasYear(result, year) {
-  const value = Number(result?.year);
+function hasYear(result: AnimeSearchResult, year: number): boolean {
+  const value = Number(result.year);
   return Number.isFinite(value) && value > 0 && Math.abs(value - year) <= 1;
 }
 
@@ -72,9 +116,14 @@ function hasYear(result, year) {
  *   finds "... 4");
  * - otherwise the first exact match, then the first result.
  */
-export function pickAnime(results, query, year) {
-  const list = (Array.isArray(results) ? results : []).filter(
-    (item) => typeof item?.url === "string" && item.url.startsWith("/anime/"),
+export function pickAnime(
+  results: unknown,
+  query: string,
+  year?: number | null,
+): AnimeSearchResult | null {
+  const list = toResults(results).filter(
+    (item): item is AnimeSearchResult & { url: string } =>
+      typeof item.url === "string" && item.url.startsWith("/anime/"),
   );
   if (list.length === 0) return null;
 
@@ -87,7 +136,7 @@ export function pickAnime(results, query, year) {
     if (exactSameYear) return exactSameYear;
 
     const sameYear = list.find(
-      (item) => words && normalizeTitle(item.title).startsWith(words) && hasYear(item, year),
+      (item) => Boolean(words) && normalizeTitle(item.title).startsWith(words) && hasYear(item, year),
     );
     if (sameYear) return sameYear;
   }
@@ -95,7 +144,7 @@ export function pickAnime(results, query, year) {
   return exact[0] ?? list[0];
 }
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -107,19 +156,19 @@ export function createAnisaturnResolver({
   baseUrl = ANISATURN_URL,
   spacingMs = REQUEST_SPACING_MS,
   cacheTtlMs = CACHE_TTL_MS,
-  fetchImpl = (...args) => globalThis.fetch(...args),
-} = {}) {
-  const cache = new Map();
+  fetchImpl = (input, init) => globalThis.fetch(input, init),
+}: AnisaturnResolverOptions = {}): AnisaturnResolver {
+  const cache = new Map<string, CacheEntry>();
   let lastRequestAt = 0;
-  let queue = Promise.resolve();
+  let queue: Promise<void> = Promise.resolve();
 
   /** Serialise and space out requests; cache answers for a few hours. */
-  async function search(query) {
+  async function search(query: string): Promise<AnimeSearchResult[]> {
     const key = normalizeTitle(query);
     const cached = cache.get(key);
     if (cached && Date.now() - cached.at < cacheTtlMs) return cached.results;
 
-    const run = async () => {
+    const run = async (): Promise<AnimeSearchResult[]> => {
       const wait = spacingMs - (Date.now() - lastRequestAt);
       if (wait > 0) await sleep(wait);
       lastRequestAt = Date.now();
@@ -128,21 +177,22 @@ export function createAnisaturnResolver({
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
       });
       if (!response.ok) {
-        throw Object.assign(new Error(`AniSaturn search for "${query}" failed with status ${response.status}`), {
-          status: 502,
-        });
+        throw httpError(`AniSaturn search for "${query}" failed with status ${response.status}`, 502);
       }
 
       const text = await response.text();
-      let data;
+      let data: { results?: unknown } | null;
       try {
-        data = JSON.parse(text);
+        data = JSON.parse(text) as { results?: unknown } | null;
       } catch {
-        throw Object.assign(new Error(`AniSaturn search for "${query}" was rate-limited`), { status: 429 });
+        throw httpError(`AniSaturn search for "${query}" was rate-limited`, 429);
       }
 
-      const results = Array.isArray(data?.results) ? data.results : [];
-      if (cache.size >= 300) cache.delete(cache.keys().next().value);
+      const results = toResults(data?.results);
+      if (cache.size >= 300) {
+        const oldest = cache.keys().next().value;
+        if (oldest !== undefined) cache.delete(oldest);
+      }
       cache.set(key, { at: Date.now(), results });
       return results;
     };
@@ -159,7 +209,11 @@ export function createAnisaturnResolver({
    * Link of episode `progress + 1` for `title`, or `[]` when AniSaturn has no
    * matching anime. `year` is the AniList release year.
    */
-  async function episodeLink(title, progress, year) {
+  async function episodeLink(
+    title: string,
+    progress: number,
+    year?: number | null,
+  ): Promise<string[]> {
     for (const query of searchQueries(title)) {
       const anime = pickAnime(await search(query), query, year);
       if (!anime) continue;
@@ -176,10 +230,14 @@ export function createAnisaturnResolver({
   return { search, episodeLink };
 }
 
-let defaultResolver = null;
+let defaultResolver: AnisaturnResolver | null = null;
 
 /** Convenience wrapper over a shared resolver. */
-export function nextEpisodeLink(title, progress, year) {
+export function nextEpisodeLink(
+  title: string,
+  progress: number,
+  year?: number | null,
+): Promise<string[]> {
   defaultResolver ??= createAnisaturnResolver();
   return defaultResolver.episodeLink(title, progress, year);
 }

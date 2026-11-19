@@ -8,20 +8,24 @@ import {
   searchQueries,
 } from "../src/services/anilist/links.js";
 
-function fakeFetch(routes) {
-  const calls = [];
-  const impl = async (url) => {
+type Results = Array<{ title: string; year?: string; url: string }>;
+type Routes = Record<string, Results>;
+
+function fakeFetch(routes: Routes) {
+  const calls: string[] = [];
+
+  const impl = async (url: string) => {
     const decoded = decodeURIComponent(String(url));
     calls.push(decoded);
-    const results = Object.entries(routes).find(([needle]) => decoded.endsWith(needle))?.[1];
+    const match = Object.entries(routes).find(([needle]) => decoded.endsWith(needle));
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ results: results ?? [] }),
+      text: async () => JSON.stringify({ results: match?.[1] ?? [] }),
     };
   };
-  impl.calls = calls;
-  return impl;
+
+  return Object.assign(impl, { calls });
 }
 
 test("animeIdFrom extracts the id from an AniSaturn result", () => {
@@ -64,7 +68,9 @@ test("pickAnime uses the release year to tell seasons apart", () => {
 
 test("episodeLink retries without the Season word", async () => {
   const fetchImpl = fakeFetch({
-    "Slime 4": [{ title: "That Time I Got Reincarnated as a Slime 4", year: "2026", url: "/anime/slime-4-ySAuE" }],
+    "Slime 4": [
+      { title: "That Time I Got Reincarnated as a Slime 4", year: "2026", url: "/anime/slime-4-ySAuE" },
+    ],
   });
   const resolver = createAnisaturnResolver({ fetchImpl, spacingMs: 0 });
 
@@ -106,5 +112,8 @@ test("episodeLink surfaces HTTP failures for the service to swallow", async () =
     fetchImpl: async () => ({ ok: false, status: 503, text: async () => "" }),
   });
 
-  await assert.rejects(resolver.episodeLink("Bleach", 0), (error) => error.status === 502);
+  await assert.rejects(
+    resolver.episodeLink("Bleach", 0),
+    (error: { status?: number }) => error.status === 502,
+  );
 });

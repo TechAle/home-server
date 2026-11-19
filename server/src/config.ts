@@ -1,7 +1,6 @@
 /**
  * Configuration — reads `server/configuration.json` (non-secret settings) and
- * `server/.env` (secrets), exactly like the Flask project does with
- * `python-dotenv` + `configurationPath`.
+ * `server/.env` (secrets).
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,10 +9,30 @@ import dotenv from "dotenv";
 /** server/ — the folder that contains configuration.json, .env and templates/. */
 export const serverRoot = new URL("../", import.meta.url).pathname;
 
-export async function loadConfiguration(root = serverRoot) {
-  const file = join(root, "configuration.json");
-  const raw = await readFile(file, "utf8");
-  const config = JSON.parse(raw);
+export interface AniListConfig {
+  api: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  accessToken: string;
+}
+
+export interface AppConfig {
+  anilist: AniListConfig;
+  templates: string;
+}
+
+interface ConfigurationFile {
+  anilist?: {
+    api?: string;
+    clientId?: string;
+    redirectUri?: string;
+  };
+}
+
+export async function loadConfiguration(root: string = serverRoot): Promise<AppConfig> {
+  const raw = await readFile(join(root, "configuration.json"), "utf8");
+  const config = JSON.parse(raw) as ConfigurationFile;
 
   dotenv.config({ path: join(root, ".env"), quiet: true });
 
@@ -29,7 +48,7 @@ export async function loadConfiguration(root = serverRoot) {
   };
 }
 
-export function requireEnv(name) {
+export function requireEnv(name: string): string {
   const value = (process.env[name] ?? "").trim();
   if (!value) {
     throw new Error(

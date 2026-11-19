@@ -4,31 +4,33 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadExecutables } from "../src/loader.js";
+import type { Registry } from "../src/registry.js";
 
 function fakeRegistry() {
-  const calls = { routes: [], tasks: [], functions: [] };
-  return {
-    calls,
-    route(method, url) {
+  const calls = { routes: [] as string[], tasks: [] as Array<{ interval: number; name: string }>, functions: [] as string[] };
+  const registry = {
+    route(method: string, url: string) {
       calls.routes.push(`${method} ${url}`);
     },
-    scheduledTask(interval, _handler, name) {
+    scheduledTask(interval: number, _handler: unknown, name: string) {
       calls.tasks.push({ interval, name });
     },
-    serverFunction(name) {
+    serverFunction(name: string) {
       calls.functions.push(name);
     },
-  };
+  } as unknown as Registry;
+
+  return { calls, registry };
 }
 
 test("loads a service and registers its rules", async () => {
   const dir = await mkdtemp(join(tmpdir(), "loader-"));
   try {
     await writeFile(
-      join(dir, "demo-service.js"),
+      join(dir, "demo-service.ts"),
       `
       import { route, scheduledTask, serverFunction } from ${JSON.stringify(
-        new URL("../src/rules.js", import.meta.url).href,
+        new URL("../src/rules.ts", import.meta.url).href,
       )};
 
       export default class DemoService {
@@ -40,14 +42,14 @@ test("loads a service and registers its rules", async () => {
       `,
     );
 
-    const registry = fakeRegistry();
+    const { calls, registry } = fakeRegistry();
     const loaded = await loadExecutables(dir, registry, { log: { warn() {} } });
 
     assert.equal(loaded.length, 1);
-    assert.deepEqual(registry.calls.routes, ["GET /ping", "POST /write"]);
-    assert.equal(registry.calls.tasks.length, 1);
-    assert.equal(registry.calls.tasks[0].interval, 60000);
-    assert.deepEqual(registry.calls.functions, ["helper"]);
+    assert.deepEqual(calls.routes, ["GET /ping", "POST /write"]);
+    assert.equal(calls.tasks.length, 1);
+    assert.equal(calls.tasks[0]?.interval, 60000);
+    assert.deepEqual(calls.functions, ["helper"]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -56,11 +58,11 @@ test("loads a service and registers its rules", async () => {
 test("ignores files without a default class", async () => {
   const dir = await mkdtemp(join(tmpdir(), "loader-"));
   try {
-    await writeFile(join(dir, "not-a-service.js"), `export const value = 42;`);
-    const registry = fakeRegistry();
+    await writeFile(join(dir, "not-a-service.ts"), `export const value = 42;`);
+    const { calls, registry } = fakeRegistry();
     const loaded = await loadExecutables(dir, registry, { log: { warn() {} } });
     assert.equal(loaded.length, 0);
-    assert.deepEqual(registry.calls.routes, []);
+    assert.deepEqual(calls.routes, []);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
