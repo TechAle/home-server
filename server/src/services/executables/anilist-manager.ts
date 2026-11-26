@@ -6,11 +6,12 @@
  * Output shape:
  *   { [animeTitle]: { progress: number, link: string[], nextEpisode: object | null } }
  */
-import { route, type RouteHandler } from "../../rules.js";
+import { route } from "../../rules.js";
 import { createAniListClient, type AniListClient, type AniListEntry } from "../anilist/client.js";
 import { nextEpisodeLink } from "../anilist/links.js";
 import { nextEpisodeState, type NextEpisode } from "../anilist/next-episode.js";
 import type { AniListConfig } from "../../config.js";
+import type { Logger } from "../../registry.js";
 
 export interface AnimeToWatch {
   progress: number;
@@ -29,6 +30,7 @@ interface Candidate {
 
 export default class AnilistManager {
   #client: AniListClient | null = null;
+  #log: Logger = console;
 
   api = "https://graphql.anilist.co";
   clientId = "";
@@ -37,8 +39,9 @@ export default class AnilistManager {
   accessToken = "";
 
   /** Called by the loader once the configuration is available. */
-  configure(anilist: Partial<AniListConfig>): this {
+  configure(anilist: Partial<AniListConfig>, log: Logger = console): this {
     Object.assign(this, anilist);
+    this.#log = log;
     // Rebuild lazily with the new token/API on the next request.
     this.#client = null;
     return this;
@@ -66,7 +69,7 @@ export default class AnilistManager {
           return (await nextEpisodeLink(title, entry.progress, entry.media.startDate?.year)) as string[];
         } catch (error) {
           const err = error as { message?: string };
-          console.warn(`[anilist] ${title}: ${err?.message ?? error}`);
+          this.#log.warn?.(`[anilist] ${title}: ${err?.message ?? error}`);
           return [];
         }
       }),
@@ -80,5 +83,3 @@ export default class AnilistManager {
     return toWatch;
   });
 }
-
-export type { RouteHandler };

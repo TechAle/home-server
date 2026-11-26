@@ -21,6 +21,14 @@ export interface CreateAppOptions {
   log?: Logger;
 }
 
+interface Configurable {
+  configure(anilist: AppConfig["anilist"], log: Logger): unknown;
+}
+
+function isConfigurable(value: object): value is Configurable {
+  return "configure" in value && typeof value.configure === "function";
+}
+
 export async function createApp(config: AppConfig, { log = console }: CreateAppOptions = {}): Promise<CreatedApp> {
   const app = express();
   const registry = createRegistry({ app, log });
@@ -34,8 +42,7 @@ export async function createApp(config: AppConfig, { log = console }: CreateAppO
     log,
     setup(instance) {
       // Services that need configuration expose `configure` (AnilistManager).
-      const configurable = instance as { configure?: (anilist: AppConfig["anilist"]) => unknown };
-      configurable.configure?.(config.anilist);
+      if (isConfigurable(instance)) instance.configure(config.anilist, log);
     },
   });
 

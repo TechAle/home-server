@@ -38,8 +38,6 @@ interface WatchingData {
 }
 
 export interface AniListClient {
-  executeQuery<T>(query: string, variables?: Record<string, unknown>): Promise<AniListResponse<T>>;
-  currentUserId(): Promise<number>;
   watchingAnime(): Promise<AniListEntry[]>;
 }
 
@@ -100,5 +98,5 @@ export function createAniListClient({
     return response.data.MediaListCollection.lists[0]?.entries ?? [];
   }
 
-  return { executeQuery, currentUserId, watchingAnime };
+  return { watchingAnime };
 }

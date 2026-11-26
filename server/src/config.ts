@@ -47,13 +47,3 @@ export async function loadConfiguration(root: string = serverRoot): Promise<AppC
     templates: join(root, "templates"),
   };
 }
-
-export function requireEnv(name: string): string {
-  const value = (process.env[name] ?? "").trim();
-  if (!value) {
-    throw new Error(
-      `Missing environment variable ${name}. Copy server/.env.example to server/.env and fill in the value.`,
-    );
-  }
-  return value;
-}

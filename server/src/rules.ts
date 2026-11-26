@@ -13,7 +13,7 @@ export type RouteHandler = (req: Request, res: Response) => unknown | Promise<un
 export type Rule =
   | { kind: "route"; url: string; methods: string[] }
   | { kind: "scheduledTask"; interval: number }
-  | ({ kind: "serverFunction" } & Record<string, unknown>);
+  | { kind: "serverFunction" };
 
 export type RuleHandler = RouteHandler & { rule?: Rule };
 
@@ -37,8 +37,8 @@ export function scheduledTask(interval: number) {
   };
 }
 
-export function serverFunction(options: Record<string, unknown> = {}) {
+export function serverFunction() {
   return (handler: RouteHandler): RouteHandler => {
-    return Object.assign(handler, { rule: { kind: "serverFunction", ...options } satisfies Rule });
+    return Object.assign(handler, { rule: { kind: "serverFunction" } satisfies Rule });
   };
 }

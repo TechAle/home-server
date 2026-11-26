@@ -52,8 +52,8 @@ export async function loadExecutables(
 
   for (const file of files) {
     const moduleUrl = pathToFileURL(join(directory, file)).href;
-    const module = (await import(moduleUrl)) as { default?: unknown };
-    const Service = module.default;
+    const imported = (await import(moduleUrl)) as { default?: unknown };
+    const Service = imported.default;
 
     if (typeof Service !== "function") {
       log.warn?.(`[loader] ${file} has no default class, skipped`);

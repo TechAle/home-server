@@ -19,7 +19,6 @@ export const WATCHING_QUERY = `
             nextAiringEpisode { airingAt episode }
           }
           progress
-          score
         }
       }
     }

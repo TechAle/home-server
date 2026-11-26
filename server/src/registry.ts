@@ -8,6 +8,8 @@
 import type { Express, Request, Response } from "express";
 import type { RuleHandler, RouteHandler } from "./rules.js";
 
+type Verb = "get" | "post" | "put" | "patch" | "delete" | "head" | "options";
+
 export interface Logger {
   info?: (message: string) => void;
   warn?: (message: string) => void;
@@ -29,7 +31,6 @@ export interface Registry {
   route(method: string, url: string, handler: RouteHandler): void;
   scheduledTask(interval: number, handler: () => unknown | Promise<unknown>, name?: string): void;
   serverFunction(name: string, handler: RouteHandler): void;
-  get(name: string): RouteHandler;
   snapshot(): RegistrySnapshot;
   stop(): void;
 }
@@ -43,8 +44,6 @@ export function createRegistry({ app, log = console }: RegistryOptions): Registr
   const routes: RouteSnapshot[] = [];
   const tasks: Array<{ name: string; interval: number; timer: NodeJS.Timeout }> = [];
   const serverFunctions = new Map<string, RouteHandler>();
-
-  const express = app as unknown as Record<string, (url: string, handler: unknown) => void>;
 
   function wrap(handler: RouteHandler, method: string, url: string) {
     return async (req: Request, res: Response): Promise<void> => {
@@ -67,8 +66,8 @@ export function createRegistry({ app, log = console }: RegistryOptions): Registr
 
   return {
     route(method, url, handler) {
-      const verb = method.toLowerCase();
-      express[verb](url, wrap(handler, method.toUpperCase(), url));
+      const verb = method.toLowerCase() as Verb;
+      app.route(url)[verb](wrap(handler, method.toUpperCase(), url));
       routes.push({ method: method.toUpperCase(), url });
     },
 
@@ -88,12 +87,6 @@ export function createRegistry({ app, log = console }: RegistryOptions): Registr
 
     serverFunction(name, handler) {
       serverFunctions.set(name, handler);
-    },
-
-    get(name) {
-      const fn = serverFunctions.get(name);
-      if (!fn) throw new Error(`Unknown server function "${name}"`);
-      return fn;
     },
 
     snapshot() {
