@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Server: dev",
+      "type": "npm",
+      "script": "dev",
+      "path": "server",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Server: build",
+      "type": "npm",
+      "script": "build",
+      "path": "server",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Server: typecheck",
+      "type": "npm",
+      "script": "typecheck",
+      "path": "server",
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: test",
+      "type": "npm",
+      "script": "test",
+      "path": "server",
+      "problemMatcher": []
+    },
+    {
+      "label": "Client: Metro",
+      "type": "npm",
+      "script": "start",
+      "path": "client",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Client: Android",
+      "type": "npm",
+      "script": "android",
+      "path": "client",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Client: iOS",
+      "type": "npm",
+      "script": "ios",
+      "path": "client",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Client: macOS",
+      "type": "npm",
+      "script": "macos",
+      "path": "client",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Client: lint",
+      "type": "npm",
+      "script": "lint",
+      "path": "client",
+      "problemMatcher": []
+    },
+    {
+      "label": "Client: test",
+      "type": "npm",
+      "script": "test",
+      "path": "client",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server: Node",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx", "src/index.ts"],
+      "env": { "PORT": "5000" },
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Server: Node tests",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["test"],
+      "windows": { "runtimeExecutable": "npm.cmd" },
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Client: Android",
+      "type": "reactnative",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "platform": "android"
+    },
+    {
+      "name": "Client: iOS",
+      "type": "reactnative",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "platform": "ios"
+    }
+  ]
+}
