@@ -1,0 +1,14 @@
+[Unit]
+Description=Foundry control helper for home-server
+After=network.target
+
+[Service]
+Type=simple
+User=alessandro
+EnvironmentFile=/home/alessandro/Desktop/home-server/server/.env
+ExecStart=/usr/bin/node /home/alessandro/Desktop/home-server/server/host/foundry-control.mjs
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

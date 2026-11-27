@@ -38,6 +38,10 @@ async function startServer() {
   return { base: `http://127.0.0.1:${port}`, server, registry };
 }
 
+// The Foundry helper is a host-side service; tests run without it.
+delete process.env.FOUNDRY_CONTROL_TOKEN;
+delete process.env.FOUNDRY_CONTROL_URL;
+
 const running = await startServer();
 
 let token = "";
@@ -145,6 +149,22 @@ test("GET /get_system_resource_info returns cpu, ram and disk", async () => {
   // Real values on Linux and macOS alike (only the temperature may be unavailable).
   assert.ok(body.ram.total_mib > 0);
   assert.ok(body.disk.total_gib > 0);
+});
+
+test("GET /foundry/status reports an unconfigured helper as offline", async () => {
+  const response = await fetch(`${running.base}/foundry/status`, { headers: authHeaders() });
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as { online: boolean; error?: string };
+  assert.equal(body.online, false);
+  assert.match(body.error ?? "", /FOUNDRY_CONTROL_TOKEN/);
+});
+
+test("POST /foundry/start requires helper configuration", async () => {
+  const response = await fetch(`${running.base}/foundry/start`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  assert.equal(response.status, 503);
 });
 
 test("POST /anime/watched validates its body", async () => {

@@ -160,9 +160,30 @@ mkdir -p data   # must be writable by uid 1000 (the container's node user)
 docker compose up -d --build
 ```
 
-The compose file publishes the API only on `127.0.0.1:5000` for a reverse proxy
-running on the host (Caddy on the Raspberry), sets `TRUST_PROXY=1` so the auth
-rate limiter sees the real client IP, and keeps SQLite in `server/data`.
+The compose file uses host networking so the API can bind loopback only
+(`127.0.0.1:5000`, with Caddy in front) and reach the Foundry helper on
+`127.0.0.1:5050`. SQLite lives in `server/data`.
+
+## Foundry control
+
+The dashboard can show whether Foundry is online and start/restart it. The
+container cannot manage host processes, so `server/host/foundry-control.mjs`
+runs as a small systemd unit on the host (`server/host/foundry-control.service`).
+It listens on `127.0.0.1:5050`, checks TCP port 30000 and restarts
+`foundry-script.service` on request. Requests need
+`Authorization: Bearer $FOUNDRY_CONTROL_TOKEN`; both processes read the token
+from `server/.env`.
+
+Install it once on the Raspberry:
+
+```sh
+sudo cp server/host/foundry-control.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now foundry-control
+```
+
+The helper never opens, closes or reconfigures Foundry's port: it only checks
+the port and restarts the systemd unit that owns the process.
 
 ## Behaviour notes
 
@@ -210,6 +231,9 @@ rate limiter sees the real client IP, and keeps SQLite in `server/data`.
 | GET | `/get_memory_usage` | ComputerManager |
 | GET | `/get_system_resource_info` | ComputerManager |
 | GET | `/get_anime` | AnilistManager |
+| GET | `/foundry/status` | FoundryManager |
+| POST | `/foundry/start` | FoundryManager |
+| POST | `/foundry/restart` | FoundryManager |
 
 Every row below `/admin` except `/auth/login` and `/auth/register` requires
 `Authorization: Bearer <token>`; the three HTML pages (`/`, `/unsubscribe`,

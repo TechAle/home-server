@@ -13,6 +13,7 @@ import type {StatusTone} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
 import {useWindowSize} from '../../hooks/useWindowSize';
+import {FoundryCard} from './FoundryCard';
 import {
   formatAgo,
   formatGib,
@@ -130,6 +131,7 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
       ]}
       footer={anime.isError ? errorMessage(anime.error) : undefined}
     />,
+    <FoundryCard key="foundry" />,
     <ServiceCard
       key="files"
       icon="▤"

@@ -9,4 +9,7 @@ export const queryKeys = {
   anilist: {
     toWatch: ['anilist', 'to-watch'] as const,
   },
+  foundry: {
+    status: ['foundry', 'status'] as const,
+  },
 };

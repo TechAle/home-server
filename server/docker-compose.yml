@@ -7,13 +7,13 @@ services:
     env_file:
       - .env
     environment:
-      # Caddy on the host proxies to this container; trust its X-Forwarded-For.
-      HOST: 0.0.0.0
+      # Host networking: the API binds loopback only and can reach the host
+      # Foundry helper on 127.0.0.1.
+      HOST: 127.0.0.1
       PORT: "5000"
       TRUST_PROXY: "1"
-    ports:
-      # Only the local reverse proxy may reach the API.
-      - "127.0.0.1:5000:5000"
+      FOUNDRY_CONTROL_URL: http://127.0.0.1:5050
+    network_mode: host
     volumes:
       # SQLite lives in server/data on the host, owned by uid 1000 (node).
       - ./data:/app/data
