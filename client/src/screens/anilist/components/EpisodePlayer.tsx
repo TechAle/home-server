@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import {WebView} from 'react-native-webview';
+import {fetchAnimeDownloads} from '../../../api/anilist';
 import {resolveEpisodeEmbed} from '../../../lib/anisaturn';
 import {errorMessage} from '../../../lib/errors';
 import {useAnimeLinks, useMarkWatched} from '../../../queries/anilist';
@@ -163,11 +164,37 @@ export function EpisodePlayer({
     // progress: mark the furthest episode between the current progress and the
     // one being watched.
     const newProgress = Math.max(progress, episode);
+    const nextEpisode = newProgress + 1;
 
     try {
       await markWatched.mutateAsync({mediaId, progress: newProgress});
-      const result = await anime.refetch();
+
+      // Prefer an already-downloaded next episode; the stream is the fallback.
+      const [result, downloads] = await Promise.all([
+        anime.refetch(),
+        fetchAnimeDownloads(title).catch(() => []),
+      ]);
       const entry = result.data?.[title];
+      const downloaded = downloads.find(
+        job =>
+          job.episode === nextEpisode &&
+          job.status === 'done' &&
+          Boolean(job.playUrl),
+      );
+      const downloadedUrl = downloaded?.playUrl;
+
+      if (downloadedUrl) {
+        onNext({
+          title,
+          url: entry?.link[0] ?? '',
+          mediaId,
+          progress: newProgress,
+          episode: nextEpisode,
+          mode: 'file',
+          playUrl: downloadedUrl,
+        });
+        return;
+      }
 
       if (!entry?.link[0]) {
         setNextError(
@@ -181,7 +208,7 @@ export function EpisodePlayer({
         url: entry.link[0],
         mediaId,
         progress: newProgress,
-        episode: newProgress + 1,
+        episode: nextEpisode,
         mode: 'stream',
       });
     } catch (nextFailure) {
