@@ -27,6 +27,17 @@
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
     },
     {
+      "name": "Client: Metro",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "windows": { "runtimeExecutable": "npm.cmd" },
+      "console": "integratedTerminal",
+      "noDebug": true
+    },
+    {
       "name": "Client: Android",
       "type": "reactnative",
       "request": "launch",
@@ -39,6 +50,17 @@
       "request": "launch",
       "cwd": "${workspaceFolder}/client",
       "platform": "ios"
+    },
+    {
+      "name": "Client: macOS (run)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "macos"],
+      "windows": { "runtimeExecutable": "npm.cmd" },
+      "console": "integratedTerminal",
+      "noDebug": true
     }
   ]
 }
