@@ -87,7 +87,7 @@ export function FoundryCard() {
 }
 
 const styles = StyleSheet.create({
-  card: {gap: 14},
+  card: {gap: 14, flex: 1},
   head: {flexDirection: 'row', alignItems: 'center', gap: 11},
   icon: {
     width: 40,

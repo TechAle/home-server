@@ -79,14 +79,19 @@ export function ServiceCard({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({pressed}) => [cursorPointer, pressed && styles.pressed]}>
+      style={({pressed}) => [
+        styles.pressable,
+        cursorPointer,
+        pressed && styles.pressed,
+      ]}>
       {content}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {gap: 16},
+  card: {gap: 16, flex: 1},
+  pressable: {flex: 1},
   pressed: {opacity: 0.92},
   head: {flexDirection: 'row', alignItems: 'center', gap: 11},
   icon: {

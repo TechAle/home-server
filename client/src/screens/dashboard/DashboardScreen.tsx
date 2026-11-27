@@ -219,5 +219,5 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 22,
   },
-  grid: {flexDirection: 'row', flexWrap: 'wrap', gap: 14},
+  grid: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch', gap: 14},
 });
