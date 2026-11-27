@@ -56,6 +56,7 @@ export function ServerModeToggle({
               ) : null}
             </View>
             <Text
+              pointerEvents="none"
               style={[
                 styles.label,
                 {

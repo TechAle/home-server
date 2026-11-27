@@ -211,6 +211,7 @@ export function EpisodePlayer({
           onPress={handleNext}
           style={nextLoading ? undefined : cursorPointer}>
           <Text
+            pointerEvents="none"
             style={[
               styles.action,
               {
@@ -225,7 +226,7 @@ export function EpisodePlayer({
           accessibilityRole="button"
           onPress={openInBrowser}
           style={cursorPointer}>
-          <Text style={[styles.action, {color: theme.colors.accent}]}>
+          <Text pointerEvents="none" style={[styles.action, {color: theme.colors.accent}]}>
             Browser
           </Text>
         </Pressable>
@@ -234,7 +235,7 @@ export function EpisodePlayer({
           accessibilityLabel="Chiudi"
           onPress={onClose}
           style={cursorPointer}>
-          <Text style={styles.action}>✕</Text>
+          <Text pointerEvents="none" style={styles.action}>✕</Text>
         </Pressable>
       </View>
 
@@ -299,7 +300,7 @@ export function EpisodePlayer({
               accessibilityRole="button"
               onPress={() => setAttempt(value => value + 1)}
               style={cursorPointer}>
-              <Text style={[styles.action, {color: theme.colors.accent}]}>
+              <Text pointerEvents="none" style={[styles.action, {color: theme.colors.accent}]}>
                 Riprova
               </Text>
             </Pressable>
@@ -307,7 +308,7 @@ export function EpisodePlayer({
               accessibilityRole="button"
               onPress={openInBrowser}
               style={cursorPointer}>
-              <Text style={[styles.action, {color: theme.colors.accent}]}>
+              <Text pointerEvents="none" style={[styles.action, {color: theme.colors.accent}]}>
                 Apri nel browser
               </Text>
             </Pressable>
@@ -315,7 +316,7 @@ export function EpisodePlayer({
               accessibilityRole="button"
               onPress={onClose}
               style={cursorPointer}>
-              <Text style={styles.action}>Chiudi</Text>
+              <Text pointerEvents="none" style={styles.action}>Chiudi</Text>
             </Pressable>
           </View>
         ) : null}

@@ -59,7 +59,7 @@ export function TopBar({
               borderColor: theme.colors.line,
             },
           ]}>
-          <Text style={[styles.menuIcon, {color: theme.colors.ink2}]}>☰</Text>
+          <Text pointerEvents="none" style={[styles.menuIcon, {color: theme.colors.ink2}]}>☰</Text>
         </Pressable>
       ) : null}
 
@@ -79,6 +79,7 @@ export function TopBar({
                   selected && {backgroundColor: theme.colors.accent},
                 ]}>
                 <Text
+                  pointerEvents="none"
                   style={[
                     styles.navText,
                     {

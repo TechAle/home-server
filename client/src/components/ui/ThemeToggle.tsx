@@ -26,7 +26,7 @@ export function ThemeToggle({onToggle}: ThemeToggleProps) {
           opacity: pressed ? 0.8 : 1,
         },
       ]}>
-      <Text style={[styles.icon, {color: theme.colors.ink2}]}>
+      <Text pointerEvents="none" style={[styles.icon, {color: theme.colors.ink2}]}>
         {theme.mode === 'light' ? '☀' : '☾'}
       </Text>
     </Pressable>

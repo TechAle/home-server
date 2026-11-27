@@ -42,7 +42,7 @@ function Action({
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.action, cursorPointer, {borderColor: color}]}>
-      <Text style={[styles.actionText, {color}]}>{label}</Text>
+      <Text pointerEvents="none" style={[styles.actionText, {color}]}>{label}</Text>
     </Pressable>
   );
 }
@@ -104,7 +104,7 @@ export function EpisodeDownloadsOverlay({
           {request.title}
         </Text>
         <Text style={[styles.subtitle, {color: theme.colors.muted}]}>
-          Scarica gli episodi sul server. Giallo = da guardare, rosso = già visto.
+          Scarica gli episodi sul server. Giallo = da guardare, verde = già visto.
         </Text>
 
         {error ? (
@@ -142,7 +142,7 @@ export function EpisodeDownloadsOverlay({
                     styles.number,
                     {color: theme.colors.ink},
                     current && {color: theme.colors.warn},
-                    !current && watched && {color: theme.colors.danger},
+                    !current && watched && {color: theme.colors.ok},
                   ]}>
                   {episode}
                 </Text>
@@ -261,8 +261,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(234, 179, 8, 0.55)',
   },
   watchedRow: {
-    backgroundColor: 'rgba(229, 72, 77, 0.15)',
-    borderColor: 'rgba(229, 72, 77, 0.45)',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderColor: 'rgba(34, 197, 94, 0.45)',
   },
   number: {width: 34, fontSize: 15, fontWeight: '700', textAlign: 'center'},
   actions: {

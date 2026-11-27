@@ -64,7 +64,7 @@ export function TextField({
             hitSlop={8}
             onPress={rightAction.onPress}
             style={[styles.action, cursorPointer]}>
-            <Text style={[styles.actionText, {color: theme.colors.muted}]}>
+            <Text pointerEvents="none" style={[styles.actionText, {color: theme.colors.muted}]}>
               {rightAction.label}
             </Text>
           </Pressable>

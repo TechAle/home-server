@@ -59,6 +59,7 @@ export function Button({
         />
       ) : (
         <Text
+          pointerEvents="none"
           style={[
             styles.label,
             {color: primary ? theme.colors.onAccent : theme.colors.ink2},

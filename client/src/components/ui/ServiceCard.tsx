@@ -32,7 +32,9 @@ export function ServiceCard({
   const theme = useTheme();
 
   const content = (
-    <Card style={styles.card}>
+    <Card
+      pointerEvents={onPress ? 'none' : undefined}
+      style={styles.card}>
       <View style={styles.head}>
         <View style={[styles.icon, {backgroundColor: theme.colors.accentSoft}]}>
           <Text style={[styles.iconText, {color: theme.colors.accent}]}>

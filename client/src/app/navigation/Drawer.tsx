@@ -51,7 +51,7 @@ export function Drawer({
             onPress={onClose}
             hitSlop={8}
             style={cursorPointer}>
-            <Text style={[styles.close, {color: theme.colors.muted}]}>✕</Text>
+            <Text pointerEvents="none" style={[styles.close, {color: theme.colors.muted}]}>✕</Text>
           </Pressable>
         </View>
 
@@ -68,6 +68,7 @@ export function Drawer({
                   selected && {backgroundColor: theme.colors.accentSoft},
                 ]}>
                 <Text
+                  pointerEvents="none"
                   style={[
                     styles.itemText,
                     {
@@ -87,7 +88,7 @@ export function Drawer({
           accessibilityRole="button"
           onPress={onLogout}
           style={[styles.logout, cursorPointer, {borderTopColor: theme.colors.line}]}>
-          <Text style={[styles.logoutText, {color: theme.colors.danger}]}>
+          <Text pointerEvents="none" style={[styles.logoutText, {color: theme.colors.danger}]}>
             Esci
           </Text>
         </Pressable>

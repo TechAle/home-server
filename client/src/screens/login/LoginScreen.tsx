@@ -126,7 +126,9 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
                 accessibilityRole="button"
                 onPress={onRegister}
                 style={[styles.footer, cursorPointer]}>
-                <Text style={[styles.footerText, {color: theme.colors.muted}]}>
+                <Text
+                  pointerEvents="none"
+                  style={[styles.footerText, {color: theme.colors.muted}]}>
                   Non hai un account?{' '}
                   <Text
                     style={{

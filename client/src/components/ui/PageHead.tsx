@@ -81,7 +81,7 @@ export function PageHead({
                   opacity: pressed ? 0.8 : 1,
                 },
               ]}>
-              <Text style={[styles.refreshIcon, {color: theme.colors.ink2}]}>
+              <Text pointerEvents="none" style={[styles.refreshIcon, {color: theme.colors.ink2}]}>
                 ⟳
               </Text>
             </Pressable>

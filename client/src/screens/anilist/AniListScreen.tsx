@@ -192,6 +192,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                   },
                 ]}>
                 <Text
+                  pointerEvents="none"
                   style={[
                     styles.filterText,
                     {
@@ -260,7 +261,9 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                     onPress={() => {
                       Linking.openURL(item.link[0]).catch(() => {});
                     }}>
-                    <Text style={[styles.link, {color: theme.colors.accent}]}>
+                    <Text
+                      pointerEvents="none"
+                      style={[styles.link, {color: theme.colors.accent}]}>
                       Apri episodio {item.progress + 1} →
                     </Text>
                   </Pressable>
@@ -280,7 +283,9 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                         opacity: marking === title ? 0.6 : 1,
                       },
                     ]}>
-                    <Text style={[styles.ghostText, {color: theme.colors.accent}]}>
+                    <Text
+                      pointerEvents="none"
+                      style={[styles.ghostText, {color: theme.colors.accent}]}>
                       {marking === title ? '…' : 'Ep guardato'}
                     </Text>
                   </Pressable>
@@ -308,6 +313,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                       {backgroundColor: theme.colors.accent},
                     ]}>
                     <Text
+                      pointerEvents="none"
                       style={[
                         styles.playText,
                         {color: theme.colors.onAccent},
