@@ -153,7 +153,12 @@ answers `401` without a valid key.
 ## Behaviour notes
 
 - Ports, routes and JSON shapes are the same as the Flask app, including the
-  `-591` sentinel used for metrics that are unavailable on macOS.
+  `-591` sentinel for metrics the host cannot provide.
+- System metrics are real on both Linux and macOS: CPU usage, RAM and disk come
+  from Node/`statfs`. On macOS RAM is read from `vm_stat`, because
+  `os.freemem()` counts only free pages and would report ~99% used. CPU
+  temperature keeps the `-591` sentinel on macOS: it needs privileged tools
+  (`powermetrics`) and is not exposed by the OS to normal processes.
 - `ram.*_mib` values are **GiB**, as in the Python code (the suffix is a legacy
   of the original implementation). Fixing the units would change the API, so it
   is left as-is on purpose.

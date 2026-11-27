@@ -1,8 +1,9 @@
 /**
  * System metrics, without psutil:
  *   CPU temperature -> vcgencmd on Linux, sentinels elsewhere
- *   disk usage      -> fs.statfs
+ *   disk usage      -> fs.statfs (Linux and macOS)
  *   CPU usage       -> two samples from node:os
+ *   memory on macOS -> vm_stat, so cached pages are not counted as used
  *
  * The -591 / -590 sentinels are the Python project's, kept for API compatibility.
  */
@@ -54,25 +55,58 @@ export async function cpuTemperature(): Promise<number> {
 }
 
 export async function memoryUsage(): Promise<MemoryUsage> {
-  if (isMac) {
-    return {
-      total_memory: UNAVAILABLE,
-      used_memory: UNAVAILABLE,
-      free_memory: UNAVAILABLE,
-      memory_percent: UNAVAILABLE,
-    };
-  }
-
-  const total = os.totalmem() / 1024 ** 3;
-  const free = os.freemem() / 1024 ** 3;
+  const total = os.totalmem();
+  const free = isMac ? await macFreeMemory(total) : os.freemem();
   const used = total - free;
 
   return {
-    total_memory: round(total),
-    used_memory: round(used),
-    free_memory: round(free),
+    total_memory: round(total / 1024 ** 3),
+    used_memory: round(used / 1024 ** 3),
+    free_memory: round(free / 1024 ** 3),
     memory_percent: total > 0 ? round((used / total) * 100) : 0,
   };
+}
+
+interface VmStat {
+  pageSize: number;
+  freeBytes: number;
+}
+
+/**
+ * macOS `vm_stat`: `Pages free` ignores inactive and speculative pages, so
+ * treating them as used would always report ~99% memory usage. This mirrors
+ * Activity Monitor, where cached pages count as available memory.
+ */
+export function parseVmStat(output: string): VmStat | null {
+  const pageSize = /page size of (\d+) bytes/.exec(output)?.[1];
+  if (!pageSize) return null;
+
+  const pages = new Map<string, number>();
+  for (const line of output.split("\n")) {
+    const match = /^([^:]+):\s+([\d.]+)/.exec(line.trim());
+    if (!match?.[1] || !match[2]) continue;
+    pages.set(match[1].trim(), Number(match[2]));
+  }
+
+  const freePages =
+    (pages.get("Pages free") ?? 0) +
+    (pages.get("Pages inactive") ?? 0) +
+    (pages.get("Pages speculative") ?? 0);
+
+  if (freePages <= 0) return null;
+  return { pageSize: Number(pageSize), freeBytes: freePages * Number(pageSize) };
+}
+
+/** Available RAM on macOS, with `os.freemem()` as a last resort. */
+async function macFreeMemory(totalBytes: number): Promise<number> {
+  try {
+    const { stdout } = await execFileAsync("/usr/bin/vm_stat", []);
+    const parsed = parseVmStat(stdout);
+    if (parsed) return Math.min(totalBytes, parsed.freeBytes);
+  } catch {
+    // Fall through to the Node value.
+  }
+  return os.freemem();
 }
 
 export async function diskUsage(path = "/"): Promise<DiskUsage> {
@@ -120,25 +154,6 @@ function snapshotCpu(): CpuSnapshot {
 }
 
 export async function systemResourceInfo(): Promise<SystemResourceInfo> {
-  if (isMac) {
-    return {
-      cpu_temperature: UNAVAILABLE,
-      cpu_usage_percent: UNAVAILABLE,
-      ram: {
-        total_mib: UNAVAILABLE,
-        used_mib: UNAVAILABLE,
-        free_mib: UNAVAILABLE,
-        percent_used: UNAVAILABLE,
-      },
-      disk: {
-        total_gib: UNAVAILABLE,
-        used_gib: UNAVAILABLE,
-        free_gib: UNAVAILABLE,
-        percent_used: UNAVAILABLE,
-      },
-    };
-  }
-
   const [temperature, memory, disk, cpu] = await Promise.all([
     cpuTemperature(),
     memoryUsage(),

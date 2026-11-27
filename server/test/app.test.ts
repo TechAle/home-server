@@ -142,6 +142,9 @@ test("GET /get_system_resource_info returns cpu, ram and disk", async () => {
   assert.deepEqual(Object.keys(body).sort(), ["cpu_temperature", "cpu_usage_percent", "disk", "ram"]);
   assert.deepEqual(Object.keys(body.ram).sort(), ["free_mib", "percent_used", "total_mib", "used_mib"]);
   assert.deepEqual(Object.keys(body.disk).sort(), ["free_gib", "percent_used", "total_gib", "used_gib"]);
+  // Real values on Linux and macOS alike (only the temperature may be unavailable).
+  assert.ok(body.ram.total_mib > 0);
+  assert.ok(body.disk.total_gib > 0);
 });
 
 test("POST /anime/watched validates its body", async () => {
