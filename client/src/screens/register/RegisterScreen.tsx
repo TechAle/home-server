@@ -13,6 +13,7 @@ import {
 import {Brand} from '../../components/ui/Brand';
 import {Button} from '../../components/ui/Button';
 import {Card} from '../../components/ui/Card';
+import {ServerModeToggle} from '../../components/ui/ServerModeToggle';
 import {TextField} from '../../components/ui/TextField';
 import {ThemeToggle} from '../../components/ui/ThemeToggle';
 import {errorMessage} from '../../lib/errors';
@@ -156,6 +157,8 @@ export function RegisterScreen({onLogin, onToggleTheme}: RegisterScreenProps) {
                   </Text>
                 </Text>
               </Pressable>
+
+              <ServerModeToggle />
             </Card>
           </ScrollView>
         </KeyboardAvoidingView>

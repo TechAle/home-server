@@ -15,6 +15,7 @@ import {Button} from '../../components/ui/Button';
 import {Card} from '../../components/ui/Card';
 import {TextField} from '../../components/ui/TextField';
 import {ThemeToggle} from '../../components/ui/ThemeToggle';
+import {ServerModeToggle} from '../../components/ui/ServerModeToggle';
 import {errorMessage} from '../../lib/errors';
 import {useLogin} from '../../queries/auth';
 import {useSettingsStore} from '../../store/settings';
@@ -29,22 +30,16 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
   const theme = useTheme();
   const login = useLogin();
   const baseUrl = useSettingsStore(state => state.baseUrl);
-  const setBaseUrl = useSettingsStore(state => state.setBaseUrl);
+  const serverMode = useSettingsStore(state => state.serverMode);
 
-  const [server, setServer] = useState(baseUrl);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [revealPassword, setRevealPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const commitServer = () => {
-    if (server.trim() !== baseUrl) {setBaseUrl(server);}
-  };
-
   const submit = () => {
     if (login.isPending) {return;}
     setError('');
-    commitServer();
 
     const cleanUsername = username.trim();
     if (!cleanUsername || !password) {
@@ -91,17 +86,6 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
 
               <View style={styles.form}>
                 <TextField
-                  label="Server"
-                  value={server}
-                  onChangeText={setServer}
-                  onBlur={commitServer}
-                  placeholder="https://raspale.duckdns.org"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  returnKeyType="next"
-                />
-                <TextField
                   label="Username"
                   value={username}
                   onChangeText={setUsername}
@@ -140,10 +124,7 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() => {
-                  commitServer();
-                  onRegister();
-                }}
+                onPress={onRegister}
                 style={[styles.footer, cursorPointer]}>
                 <Text style={[styles.footerText, {color: theme.colors.muted}]}>
                   Non hai un account?{' '}
@@ -156,6 +137,8 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
                   </Text>
                 </Text>
               </Pressable>
+
+              <ServerModeToggle />
             </Card>
 
             <View style={styles.statusRow}>
@@ -163,7 +146,8 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
                 style={[styles.liveDot, {backgroundColor: theme.colors.ok}]}
               />
               <Text style={[styles.statusText, {color: theme.colors.muted}]}>
-                server locale · {baseUrl.replace(/^https?:\/\//, '')}
+                server {serverMode === 'remote' ? 'remoto' : 'locale'} ·{' '}
+                {baseUrl.replace(/^https?:\/\//, '')}
               </Text>
             </View>
           </ScrollView>
