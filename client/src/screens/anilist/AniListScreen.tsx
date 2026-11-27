@@ -455,11 +455,12 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             setDownload(null);
           }}
           onRewatchSaved={async job => {
-            if (!job.mediaId) {
+            const mediaId = anime.data?.[job.title]?.mediaId ?? job.mediaId;
+            if (!mediaId) {
               throw new Error('Media ID non disponibile per questo download.');
             }
             await rewatch.mutateAsync({
-              mediaId: job.mediaId,
+              mediaId,
               progress: Math.max(0, job.episode - 1),
             });
             setDownload(null);
