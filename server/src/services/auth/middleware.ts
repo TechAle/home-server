@@ -5,6 +5,7 @@
  * The client sends it as `Authorization: Bearer <token>`.
  */
 import type { NextFunction, Request, Response } from "express";
+import { verifyDownload } from "../anime/download-token.js";
 import { authenticate } from "./index.js";
 
 const PUBLIC_PATHS = new Set(["/auth/login", "/auth/register"]);
@@ -26,6 +27,19 @@ export function requireAuth() {
     if (PUBLIC_PATHS.has(publicPath(req.path))) {
       next();
       return;
+    }
+
+    // <video> range requests cannot carry the Bearer header, so the media route
+    // accepts a short-lived HMAC-signed URL instead.
+    if (
+      (req.method === "GET" || req.method === "HEAD") &&
+      req.path.startsWith("/downloads/")
+    ) {
+      const file = req.path.slice("/downloads/".length);
+      if (verifyDownload(file, req.query.expires, req.query.sig)) {
+        next();
+        return;
+      }
     }
 
     const token = bearerToken(req);

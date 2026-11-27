@@ -107,6 +107,23 @@ AniList title often has no result. The search tries, in order:
    (`Ascendance of a Bookworm: Adopted Daughter of an Archduke` ->
    `Ascendance of a Bookworm`).
 
+## Episode downloads
+
+`POST /anime/download` resolves the AniSaturn page to its signed MP4 and streams
+it to `server/data/downloads` (the job runs in the background):
+
+```json
+{"url":"https://www.animesaturn.net/anime/…/ep-1","title":"…","episode":1}
+```
+
+`GET /anime/download/<id>` returns `status` (`downloading`/`done`/`error`),
+`progress`, byte counts and, once done, a `playUrl`. The file is served by
+`GET /downloads/<file>` with HTTP Range support, protected by a short-lived
+HMAC signature in the query string (the `<video>` player cannot send the
+Bearer header on range requests). Downloads are capped at 2 GB and the newest
+10 files are kept; set `DOWNLOAD_SECRET` to keep signed links valid across
+restarts.
+
 When several results share the base name, the AniList `startDate.year` picks
 the right season (`Ascendance of a Bookworm` 2019 vs `... 4` 2026). Requests
 are cached for six hours and spaced out, since the search endpoint answers
@@ -242,6 +259,9 @@ The unit, sudoers file and paths assume the `alessandro` user with the repo at
 | GET | `/get_memory_usage` | ComputerManager |
 | GET | `/get_system_resource_info` | ComputerManager |
 | GET | `/get_anime` | AnilistManager |
+| POST | `/anime/download` | AnimeDownloadManager |
+| GET | `/anime/download/:id` | AnimeDownloadManager |
+| GET | `/downloads/:file` | AnimeDownloadManager (signed URL) |
 | GET | `/foundry/status` | FoundryManager |
 | POST | `/foundry/start` | FoundryManager |
 | POST | `/foundry/restart` | FoundryManager |

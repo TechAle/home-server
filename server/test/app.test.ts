@@ -178,6 +178,30 @@ test("public auth routes accept a trailing slash", async () => {
   assert.match(body.error, /Invalid username or password/);
 });
 
+test("POST /anime/download validates the page URL", async () => {
+  const response = await fetch(`${running.base}/anime/download`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: "https://example.com/anime/x/ep-1", title: "X", episode: 1 }),
+  });
+  assert.equal(response.status, 400);
+});
+
+test("GET /anime/download/:id answers 404 for an unknown job", async () => {
+  const response = await fetch(`${running.base}/anime/download/missing`, {
+    headers: authHeaders(),
+  });
+  assert.equal(response.status, 404);
+});
+
+test("GET /downloads/:file requires a valid signature", async () => {
+  const anonymous = await fetch(`${running.base}/downloads/0123456789abcdef0123.mp4`);
+  assert.equal(anonymous.status, 401);
+});
+
 test("POST /anime/watched validates its body", async () => {
   const response = await fetch(`${running.base}/anime/watched`, {
     method: "POST",
