@@ -117,8 +117,10 @@ it to `server/data/downloads` (the job runs in the background):
 ```
 
 `GET /anime/download/<id>` returns `status` (`downloading`/`done`/`error`),
-`progress`, byte counts and, once done, a `playUrl`. The file is served by
-`GET /downloads/<file>` with HTTP Range support, protected by a short-lived
+`progress`, byte counts and, once done, a `playUrl`. `GET
+/anime/downloads?title=…` lists the jobs for one title (including active ones)
+and `DELETE /anime/download/<id>` removes a finished file. The file is served
+by `GET /downloads/<file>` with HTTP Range support, protected by a short-lived
 HMAC signature in the query string (the `<video>` player cannot send the
 Bearer header on range requests). Downloads are capped at 2 GB and the newest
 10 files are kept; set `DOWNLOAD_SECRET` to keep signed links valid across
@@ -261,6 +263,8 @@ The unit, sudoers file and paths assume the `alessandro` user with the repo at
 | GET | `/get_anime` | AnilistManager |
 | POST | `/anime/download` | AnimeDownloadManager |
 | GET | `/anime/download/:id` | AnimeDownloadManager |
+| GET | `/anime/downloads` | AnimeDownloadManager |
+| DELETE | `/anime/download/:id` | AnimeDownloadManager |
 | GET | `/downloads/:file` | AnimeDownloadManager (signed URL) |
 | GET | `/foundry/status` | FoundryManager |
 | POST | `/foundry/start` | FoundryManager |
