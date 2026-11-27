@@ -8,8 +8,10 @@ import { stat } from "node:fs/promises";
 import type { Request } from "express";
 import { route } from "../../rules.js";
 import {
+  deleteDownload,
   downloadFilePath,
   getDownload,
+  listDownloads,
   startDownload,
   type DownloadView,
 } from "../anime/downloads.js";
@@ -38,6 +40,19 @@ export default class AnimeDownloadManager {
     const view = getDownload(req.params.id);
     if (!view) throw notFound();
     return view;
+  });
+
+  list = route("/anime/downloads", ["GET"])(async (req): Promise<DownloadView[]> => {
+    const title = typeof req.query.title === "string" ? req.query.title : "";
+    if (!title) {
+      throw Object.assign(new Error("Missing title query parameter."), { status: 400 });
+    }
+    return listDownloads(title);
+  });
+
+  remove = route("/anime/download/:id", ["DELETE"])(async (req) => {
+    await deleteDownload(req.params.id);
+    return { ok: true };
   });
 
   file = route("/downloads/:file", ["GET", "HEAD"])(async (req, res) => {

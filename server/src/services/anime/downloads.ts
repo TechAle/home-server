@@ -2,11 +2,18 @@
  * Server-side episode downloads.
  *
  * Resolving the player gives a signed MP4 on *.streampeaker.org. The server
- * streams it to `server/data/downloads`, keeps a small in-memory job list for
- * progress and serves the finished file through a signed, Range-capable URL.
+ * streams it to `server/data/downloads`, persists a small index so the episode
+ * list survives restarts, and serves finished files through signed Range URLs.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { readdir, rename, rm, stat, statfs } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
@@ -18,6 +25,7 @@ import { assertEpisodePage, assertMediaUrl, resolveEpisodeMp4 } from "./stream.j
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36";
 const DOWNLOADS_DIR = join(serverRoot, "data", "downloads");
+const INDEX_PATH = join(DOWNLOADS_DIR, "index.json");
 const MAX_BYTES = 2 * 1024 ** 3;
 const MAX_ACTIVE = 3;
 const KEEP_FILES = 10;
@@ -40,6 +48,16 @@ interface Job {
   createdAt: number;
 }
 
+interface StoredDownload {
+  id: string;
+  key: string;
+  title: string;
+  episode: number;
+  file: string;
+  bytes: number;
+  createdAt: number;
+}
+
 export interface DownloadView {
   id: string;
   title: string;
@@ -50,7 +68,7 @@ export interface DownloadView {
   bytes: number;
   total: number;
   error?: string;
-  /** Relative URL, signed for the WebView; only when status is done. */
+  /** Absolute path on the API host; signed for the WebView. */
   playUrl?: string;
 }
 
@@ -61,6 +79,7 @@ export interface DownloadInput {
 }
 
 const jobs = new Map<string, Job>();
+loadIndex();
 
 function httpError(status: number, message: string): Error & { status: number } {
   return Object.assign(new Error(message), { status });
@@ -84,6 +103,71 @@ function view(job: Job): DownloadView {
     result.playUrl = `/downloads/${job.file}?expires=${signed.expires}&sig=${encodeURIComponent(signed.sig)}`;
   }
   return result;
+}
+
+function saveIndex(): void {
+  try {
+    const entries: StoredDownload[] = [...jobs.values()]
+      .filter((job) => job.status === "done")
+      .map((job) => ({
+        id: job.id,
+        key: job.key,
+        title: job.title,
+        episode: job.episode,
+        file: job.file,
+        bytes: job.bytes,
+        createdAt: job.createdAt,
+      }));
+    writeFileSync(INDEX_PATH, JSON.stringify({ entries }, null, 2), { mode: 0o600 });
+  } catch {
+    // The media still works without the index; the next run retries.
+  }
+}
+
+function loadIndex(): void {
+  let raw: string;
+  try {
+    raw = readFileSync(INDEX_PATH, "utf8");
+  } catch {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { entries?: StoredDownload[] };
+    for (const entry of parsed.entries ?? []) {
+      if (
+        !entry ||
+        typeof entry.id !== "string" ||
+        typeof entry.key !== "string" ||
+        typeof entry.title !== "string" ||
+        !Number.isInteger(entry.episode) ||
+        typeof entry.file !== "string" ||
+        !FILE_PATTERN.test(entry.file)
+      ) {
+        continue;
+      }
+
+      try {
+        const info = statSync(join(DOWNLOADS_DIR, entry.file));
+        jobs.set(entry.id, {
+          id: entry.id,
+          key: entry.key,
+          title: entry.title,
+          episode: entry.episode,
+          file: entry.file,
+          status: "done",
+          bytes: info.size,
+          total: info.size,
+          createdAt: Number(entry.createdAt) || Date.now(),
+        });
+      } catch {
+        // File removed outside the app: drop the entry.
+      }
+    }
+    saveIndex();
+  } catch {
+    // Corrupt index: start clean.
+  }
 }
 
 function activeCount(): number {
@@ -172,6 +256,7 @@ async function run(job: Job, pageUrl: string): Promise<void> {
     });
     job.bytes = bytes;
     job.status = "done";
+    saveIndex();
     void cleanup();
   } catch (error) {
     const failure = error as { message?: string };
@@ -201,9 +286,15 @@ async function cleanup(): Promise<void> {
     }
 
     files.sort((a, b) => b.mtime - a.mtime);
+    let removed = false;
     for (const file of files.slice(KEEP_FILES)) {
       await rm(join(DOWNLOADS_DIR, file.name), { force: true });
+      for (const [id, job] of jobs) {
+        if (job.file === file.name) jobs.delete(id);
+      }
+      removed = true;
     }
+    if (removed) saveIndex();
 
     for (const name of names) {
       if (!name.endsWith(".part")) continue;
@@ -234,6 +325,7 @@ export function startDownload(input: DownloadInput): DownloadView {
   }
 
   const key = `${title.toLowerCase()}|${episode}|${page.toString()}`;
+  const file = `${createHash("sha256").update(key).digest("hex").slice(0, 20)}.mp4`;
   const existing = [...jobs.values()].find((job) => job.key === key);
   if (existing) {
     if (existing.status === "downloading") {
@@ -246,12 +338,36 @@ export function startDownload(input: DownloadInput): DownloadView {
     jobs.delete(existing.id);
   }
 
+  // A file downloaded before the index existed (or by a previous process) is
+  // still a valid, finished episode.
+  if (!existing && existsSync(join(DOWNLOADS_DIR, file))) {
+    try {
+      const info = statSync(join(DOWNLOADS_DIR, file));
+      const job: Job = {
+        id: randomUUID(),
+        key,
+        title,
+        episode,
+        file,
+        status: "done",
+        bytes: info.size,
+        total: info.size,
+        createdAt: Date.now(),
+      };
+      jobs.set(job.id, job);
+      saveIndex();
+      void cleanup();
+      return view(job);
+    } catch {
+      // Fall through and download it again.
+    }
+  }
+
   if (activeCount() >= MAX_ACTIVE) {
     throw httpError(503, "Too many downloads in progress. Try again later.");
   }
 
   const id = randomUUID();
-  const file = `${createHash("sha256").update(key).digest("hex").slice(0, 20)}.mp4`;
   const job: Job = {
     id,
     key,
@@ -273,6 +389,26 @@ export function startDownload(input: DownloadInput): DownloadView {
 export function getDownload(id: string): DownloadView | null {
   const job = jobs.get(id);
   return job ? view(job) : null;
+}
+
+export function listDownloads(title: string): DownloadView[] {
+  const wanted = title.trim().toLowerCase();
+  return [...jobs.values()]
+    .filter((job) => job.title.toLowerCase() === wanted)
+    .sort((a, b) => a.episode - b.episode)
+    .map(view);
+}
+
+export async function deleteDownload(id: string): Promise<void> {
+  const job = jobs.get(id);
+  if (!job) throw httpError(404, "Download not found.");
+  if (job.status === "downloading") {
+    throw httpError(409, "Download is still running.");
+  }
+
+  await rm(join(DOWNLOADS_DIR, job.file), { force: true });
+  jobs.delete(id);
+  saveIndex();
 }
 
 /** Absolute path for a signed download, or null for an invalid name. */

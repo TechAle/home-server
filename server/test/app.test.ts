@@ -197,6 +197,25 @@ test("GET /anime/download/:id answers 404 for an unknown job", async () => {
   assert.equal(response.status, 404);
 });
 
+test("GET /anime/downloads requires a title", async () => {
+  const missing = await fetch(`${running.base}/anime/downloads`, { headers: authHeaders() });
+  assert.equal(missing.status, 400);
+
+  const empty = await fetch(`${running.base}/anime/downloads?title=Nope`, {
+    headers: authHeaders(),
+  });
+  assert.equal(empty.status, 200);
+  assert.deepEqual(await empty.json(), []);
+});
+
+test("DELETE /anime/download/:id answers 404 for an unknown job", async () => {
+  const response = await fetch(`${running.base}/anime/download/missing`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  assert.equal(response.status, 404);
+});
+
 test("GET /downloads/:file requires a valid signature", async () => {
   const anonymous = await fetch(`${running.base}/downloads/0123456789abcdef0123.mp4`);
   assert.equal(anonymous.status, 401);

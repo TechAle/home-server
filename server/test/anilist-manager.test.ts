@@ -34,6 +34,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                         id: 101,
                         title: { english: "The World's Strongest Witch", romaji: "Sekai Saikyou no Majo" },
                         startDate: { year: 2026 },
+                        episodes: 12,
                         nextAiringEpisode: { episode: 7, airingAt },
                       },
                     },
@@ -44,6 +45,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                         id: 202,
                         title: { english: "Frieren: Beyond Journey's End", romaji: "Sousou no Frieren" },
                         startDate: { year: 2023 },
+                        episodes: 28,
                         nextAiringEpisode: null,
                       },
                     },
@@ -78,6 +80,8 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
     mediaId: 101,
     status: "CURRENT",
     progress: 6,
+    episodes: 6,
+    episodeBase: "",
     link: [],
     nextEpisode: { episode: 7, airingAt, airingAtIso: new Date(airingAt * 1000).toISOString() },
   });
@@ -85,6 +89,8 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
     mediaId: 202,
     status: "PLANNING",
     progress: 0,
+    episodes: 28,
+    episodeBase: "https://www.animesaturn.net/anime/frieren-QEd4Q",
     link: ["https://www.animesaturn.net/anime/frieren-QEd4Q/ep-1"],
     nextEpisode: null,
   });

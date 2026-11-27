@@ -17,6 +17,7 @@ export const WATCHING_QUERY = `
             id
             title { english romaji }
             startDate { year }
+            episodes
             nextAiringEpisode { airingAt episode }
           }
           status

@@ -15,6 +15,7 @@ export interface AniListMedia {
   id: number;
   title: AniListTitle;
   startDate?: { year?: number | null } | null;
+  episodes?: number | null;
   nextAiringEpisode?: { airingAt?: number | null; episode?: number | null } | null;
 }
 
