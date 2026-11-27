@@ -11,7 +11,11 @@ const OPTIONS: {mode: ServerMode; label: string}[] = [
  * Bottom-right switch on the login/register card: "Locale" points at the
  * host/emulator address, "Remoto" at the public DuckDNS deployment.
  */
-export function ServerModeToggle() {
+export function ServerModeToggle({
+  disabled = false,
+}: {
+  disabled?: boolean;
+}) {
   const theme = useTheme();
   const serverMode = useSettingsStore(state => state.serverMode);
   const setServerMode = useSettingsStore(state => state.setServerMode);
@@ -25,10 +29,14 @@ export function ServerModeToggle() {
           <Pressable
             key={option.mode}
             accessibilityRole="checkbox"
-            accessibilityState={{checked: selected}}
+            accessibilityState={{checked: selected, disabled}}
             accessibilityLabel={`Server ${option.label.toLowerCase()}`}
+            disabled={disabled}
             onPress={() => setServerMode(option.mode)}
-            style={[styles.option, cursorPointer]}>
+            style={[
+              styles.option,
+              disabled ? styles.disabled : cursorPointer,
+            ]}>
             <View
               style={[
                 styles.box,
@@ -74,6 +82,7 @@ const styles = StyleSheet.create({
   },
   caption: {fontSize: 12, marginRight: 2},
   option: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  disabled: {opacity: 0.5},
   box: {
     width: 17,
     height: 17,

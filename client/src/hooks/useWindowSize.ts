@@ -18,7 +18,10 @@ const initial = Dimensions.get('window');
  */
 export function useWindowSize(): WindowSize {
   const {width, height} = useWindowDimensions();
-  const lastGood = useRef<WindowSize>({width: initial.width, height: initial.height});
+  const lastGood = useRef<WindowSize>({
+    width: initial.width > 0 ? initial.width : 1024,
+    height: initial.height > 0 ? initial.height : 768,
+  });
 
   if (width > 0 && height > 0) {
     lastGood.current = {width, height};

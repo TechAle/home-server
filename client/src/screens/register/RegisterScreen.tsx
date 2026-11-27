@@ -158,7 +158,7 @@ export function RegisterScreen({onLogin, onToggleTheme}: RegisterScreenProps) {
                 </Text>
               </Pressable>
 
-              <ServerModeToggle />
+              <ServerModeToggle disabled={register.isPending} />
             </Card>
           </ScrollView>
         </KeyboardAvoidingView>

@@ -138,7 +138,7 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
                 </Text>
               </Pressable>
 
-              <ServerModeToggle />
+              <ServerModeToggle disabled={login.isPending} />
             </Card>
 
             <View style={styles.statusRow}>

@@ -157,6 +157,7 @@ export function EpisodePlayer({
 
   return (
     <SafeAreaView
+      accessibilityViewIsModal
       style={[
         styles.root,
         Platform.OS === 'android' && {paddingTop: StatusBar.currentHeight ?? 0},

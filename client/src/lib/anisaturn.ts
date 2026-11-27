@@ -46,18 +46,31 @@ export async function resolveEpisodeEmbed(pageUrl: string): Promise<string> {
     throw new Error('Link episodio non valido.');
   }
 
-  const response = await fetch(pageUrl, {
-    headers: {Accept: 'text/html', 'User-Agent': ANISATURN_USER_AGENT},
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
 
-  if (!response.ok) {
-    throw new Error(`AniSaturn ha risposto ${response.status}.`);
+  try {
+    const response = await fetch(pageUrl, {
+      headers: {Accept: 'text/html', 'User-Agent': ANISATURN_USER_AGENT},
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`AniSaturn ha risposto ${response.status}.`);
+    }
+
+    const embedUrl = extractEmbedUrl(await response.text());
+    if (!embedUrl) {
+      throw new Error("Player non trovato nella pagina dell'episodio.");
+    }
+
+    return embedUrl;
+  } catch (error) {
+    if ((error as Error | null)?.name === 'AbortError') {
+      throw new Error('AniSaturn non ha risposto in tempo.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const embedUrl = extractEmbedUrl(await response.text());
-  if (!embedUrl) {
-    throw new Error("Player non trovato nella pagina dell'episodio.");
-  }
-
-  return embedUrl;
 }

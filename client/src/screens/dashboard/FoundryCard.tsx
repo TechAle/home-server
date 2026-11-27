@@ -10,6 +10,7 @@ import {
   useStartFoundry,
 } from '../../queries/foundry';
 import {useTheme} from '../../theme';
+import {useFoundryUiStore} from '../../store/foundry';
 
 /** Foundry is managed on the host; this card only checks and restarts it. */
 export function FoundryCard() {
@@ -17,20 +18,24 @@ export function FoundryCard() {
   const status = useFoundryStatus();
   const start = useStartFoundry();
   const restart = useRestartFoundry();
-  const [cooldown, setCooldown] = useState(false);
+  const cooldownUntil = useFoundryUiStore(state => state.cooldownUntil);
+  const startCooldown = useFoundryUiStore(state => state.startCooldown);
+  const [, setTick] = useState(0);
   const [error, setError] = useState('');
 
-  // Foundry takes a few seconds to bind its port; avoid a second restart.
+  // Re-render once the cooldown expires, even after a remount.
   useEffect(() => {
-    if (!cooldown) {
+    const remaining = cooldownUntil - Date.now();
+    if (remaining <= 0) {
       return;
     }
-    const id = setTimeout(() => setCooldown(false), 15_000);
+    const id = setTimeout(() => setTick(value => value + 1), remaining);
     return () => clearTimeout(id);
-  }, [cooldown]);
+  }, [cooldownUntil]);
 
-  const online = Boolean(status.data?.online);
-  const busy = start.isPending || restart.isPending || cooldown;
+  const cooldown = cooldownUntil > Date.now();
+  const online = !status.isError && Boolean(status.data?.online);
+  const busy = status.isPending || start.isPending || restart.isPending || cooldown;
 
   const run = async () => {
     if (busy) {
@@ -40,7 +45,7 @@ export function FoundryCard() {
     setError('');
     try {
       await (online ? restart.mutateAsync() : start.mutateAsync());
-      setCooldown(true);
+      startCooldown(15_000);
     } catch (failure) {
       setError(errorMessage(failure));
     }
@@ -52,7 +57,10 @@ export function FoundryCard() {
       ? {tone: 'ok', label: 'online'}
       : {tone: 'danger', label: 'offline'};
 
-  const detail = error || status.data?.error;
+  const detail =
+    error ||
+    status.data?.error ||
+    (status.isError ? errorMessage(status.error) : '');
 
   return (
     <Card style={styles.card}>
@@ -87,7 +95,7 @@ export function FoundryCard() {
 }
 
 const styles = StyleSheet.create({
-  card: {gap: 14, flex: 1},
+  card: {gap: 14, flexGrow: 1},
   head: {flexDirection: 'row', alignItems: 'center', gap: 11},
   icon: {
     width: 40,

@@ -90,8 +90,8 @@ export function ServiceCard({
 }
 
 const styles = StyleSheet.create({
-  card: {gap: 16, flex: 1},
-  pressable: {flex: 1},
+  card: {gap: 16, flexGrow: 1},
+  pressable: {flexGrow: 1},
   pressed: {opacity: 0.92},
   head: {flexDirection: 'row', alignItems: 'center', gap: 11},
   icon: {

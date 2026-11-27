@@ -23,7 +23,9 @@ export function Drawer({
   if (!open) {return null;}
 
   return (
-    <View style={[StyleSheet.absoluteFill, styles.overlay]}>
+    <View
+      style={[StyleSheet.absoluteFill, styles.overlay]}
+      accessibilityViewIsModal>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Chiudi menu"

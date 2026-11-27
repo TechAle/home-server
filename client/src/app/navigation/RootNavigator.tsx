@@ -6,7 +6,8 @@
  * structure — app/navigation owns the routes, screens stay dumb — with a plain
  * state machine; swapping in React Navigation later only touches this file.
  */
-import {useState} from 'react';
+import {useQueryClient} from '@tanstack/react-query';
+import {useEffect, useState} from 'react';
 import {View} from 'react-native';
 import {Background} from '../../components/ui/Background';
 import {ConnectionError} from '../../components/ui/ConnectionError';
@@ -23,6 +24,15 @@ import type {PublicRoute} from './routes';
 export function RootNavigator() {
   const hydrated = useAuthHydrated();
   const token = useAuthStore(state => state.token);
+  const queryClient = useQueryClient();
+
+  // A forced 401 or a logout must not leave another server's data in the
+  // cache: the next login may target Locale or Remoto.
+  useEffect(() => {
+    if (!token) {
+      queryClient.clear();
+    }
+  }, [token, queryClient]);
 
   // The splash uses the app theme: day sky in light, Vanta in dark.
   if (!hydrated) {

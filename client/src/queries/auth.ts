@@ -55,11 +55,9 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      try {
-        await authApi.logout();
-      } catch {
-        // Revoking a key the server already rejected is not an error.
-      }
+      // Never block the UI on revocation: the local session goes away now, and
+      // the request keeps running with the token captured when it started.
+      authApi.logout().catch(() => {});
     },
     onSettled: () => {
       clearSession();

@@ -50,13 +50,18 @@ export const useSettingsStore = create<SettingsState>()(
       // Settings saved before serverMode existed: infer it from the URL.
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<SettingsState>;
-        const baseUrl = saved.baseUrl ?? current.baseUrl;
+        const baseUrl =
+          typeof saved.baseUrl === 'string' ? saved.baseUrl : current.baseUrl;
+        const savedMode = saved.serverMode;
         return {
           ...current,
           ...saved,
           serverMode:
-            saved.serverMode ??
-            (baseUrl.includes('duckdns.org') ? 'remote' : 'local'),
+            savedMode === 'local' || savedMode === 'remote'
+              ? savedMode
+              : baseUrl.includes('duckdns.org')
+                ? 'remote'
+                : 'local',
         };
       },
     },
