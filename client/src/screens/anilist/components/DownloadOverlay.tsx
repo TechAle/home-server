@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import {startAnimeDownload} from '../../../api/anilist';
 import {Button} from '../../../components/ui/Button';
 import {Card} from '../../../components/ui/Card';
@@ -35,6 +35,8 @@ export function DownloadOverlay({request, onDone, onClose}: DownloadOverlayProps
   const [starting, setStarting] = useState(true);
   const [startError, setStartError] = useState('');
   const played = useRef(false);
+  const playUrlRef = useRef<string | null>(null);
+  const onDoneRef = useRef(onDone);
   const job = useAnimeDownload(jobId);
 
   useEffect(() => {
@@ -62,13 +64,31 @@ export function DownloadOverlay({request, onDone, onClose}: DownloadOverlayProps
   }, [request.url, request.title, request.episode]);
 
   useEffect(() => {
-    if (job.data?.status === 'done' && job.data.playUrl && !played.current) {
-      played.current = true;
-      onDone(job.data.playUrl);
-    }
-  }, [job.data?.status, job.data?.playUrl, onDone]);
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
-  const progress = job.data?.progress ?? 0;
+  useEffect(() => {
+    playUrlRef.current = job.data?.playUrl ?? null;
+  }, [job.data?.playUrl]);
+
+  const done = job.data?.status === 'done';
+
+  // Leave the completed bar visible for a moment before opening the player.
+  useEffect(() => {
+    if (!done) {
+      return;
+    }
+    const id = setTimeout(() => {
+      if (played.current || !playUrlRef.current) {
+        return;
+      }
+      played.current = true;
+      onDoneRef.current(playUrlRef.current);
+    }, 800);
+    return () => clearTimeout(id);
+  }, [done]);
+
+  const progress = done ? 100 : (job.data?.progress ?? 0);
   const error =
     startError ||
     job.data?.error ||
@@ -90,9 +110,18 @@ export function DownloadOverlay({request, onDone, onClose}: DownloadOverlayProps
           <Text style={[styles.error, {color: theme.colors.danger}]}>{error}</Text>
         ) : (
           <>
-            <Text style={[styles.status, {color: theme.colors.ink2}]}>
-              {starting || !jobId ? 'Preparazione del download…' : 'Download in corso…'}
-            </Text>
+            <View style={styles.statusRow}>
+              {!done && (starting || !jobId) ? (
+                <ActivityIndicator size="small" color={theme.colors.accent} />
+              ) : null}
+              <Text style={[styles.status, {color: theme.colors.ink2}]}>
+                {done
+                  ? 'Download completato'
+                  : starting || !jobId
+                    ? 'Preparazione del download…'
+                    : 'Download in corso…'}
+              </Text>
+            </View>
             <View
               style={[
                 styles.track,
@@ -113,12 +142,14 @@ export function DownloadOverlay({request, onDone, onClose}: DownloadOverlayProps
               {megabytes(job.data?.total ?? 0)}
             </Text>
             <Text style={[styles.hint, {color: theme.colors.muted}]}>
-              Il download continua sul server anche se chiudi questa finestra.
+              {done
+                ? 'Apro il player…'
+                : 'Il download continua sul server anche se chiudi questa finestra.'}
             </Text>
           </>
         )}
 
-        <Button label={error ? 'Chiudi' : 'Annulla'} variant="ghost" onPress={onClose} />
+        <Button label={error || done ? 'Chiudi' : 'Annulla'} variant="ghost" onPress={onClose} />
       </Card>
     </View>
   );
@@ -141,8 +172,9 @@ const styles = StyleSheet.create({
   },
   title: {fontSize: 18, fontWeight: '700', letterSpacing: -0.3},
   status: {fontSize: 13, fontWeight: '600'},
-  track: {height: 8, borderRadius: 999, overflow: 'hidden'},
-  fill: {height: 8, borderRadius: 999},
+  statusRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  track: {height: 10, borderRadius: 999, overflow: 'hidden'},
+  fill: {height: 10, borderRadius: 999},
   meta: {fontSize: 12},
   hint: {fontSize: 11.5, lineHeight: 17},
   error: {fontSize: 12.5, lineHeight: 18},
