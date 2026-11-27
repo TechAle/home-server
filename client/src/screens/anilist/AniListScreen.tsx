@@ -15,7 +15,7 @@ import {StatusBadge} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
 import {formatAgo, formatAiring} from '../../lib/format';
-import {useAnimeLinks} from '../../queries/anilist';
+import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
 import {useTheme} from '../../theme';
 import {EpisodeActions} from './components/EpisodeActions';
 
@@ -32,8 +32,14 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const anime = useAnimeLinks();
+  const markWatched = useMarkWatched();
   const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
+  const [marking, setMarking] = useState<string | null>(null);
+  const [markError, setMarkError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [choice, setChoice] = useState<{
     title: string;
     episode: number;
@@ -48,6 +54,28 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
       await queryClient.invalidateQueries();
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const markEpisodeWatched = async (
+    title: string,
+    mediaId: number,
+    progress: number,
+  ) => {
+    if (marking) {
+      return;
+    }
+
+    setMarking(title);
+    setMarkError(null);
+
+    try {
+      await markWatched.mutateAsync({mediaId, progress: progress + 1});
+      await anime.refetch();
+    } catch (failure) {
+      setMarkError({title, message: errorMessage(failure)});
+    } finally {
+      setMarking(null);
     }
   };
 
@@ -149,6 +177,25 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
 
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel={`Segna come visto l'episodio ${item.progress + 1}`}
+                    disabled={marking === title}
+                    onPress={() =>
+                      markEpisodeWatched(title, item.mediaId, item.progress)
+                    }
+                    style={[
+                      styles.ghost,
+                      {
+                        borderColor: theme.colors.accent,
+                        opacity: marking === title ? 0.6 : 1,
+                      },
+                    ]}>
+                    <Text style={[styles.ghostText, {color: theme.colors.accent}]}>
+                      {marking === title ? '…' : 'Ep guardato'}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
                     onPress={() =>
                       setChoice({
                         title,
@@ -181,6 +228,12 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                   Nessun episodio in programma
                 </Text>
               )}
+
+              {markError?.title === title ? (
+                <Text style={[styles.note, {color: theme.colors.danger}]}>
+                  {markError.message}
+                </Text>
+              ) : null}
             </Card>
           ))}
         </View>
@@ -231,6 +284,8 @@ const styles = StyleSheet.create({
   actions: {flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap'},
   play: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8},
   playText: {fontSize: 12, fontWeight: '700'},
+  ghost: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1},
+  ghostText: {fontSize: 12, fontWeight: '700'},
   link: {fontSize: 13, fontWeight: '600'},
   note: {fontSize: 12.5, lineHeight: 18},
 });
