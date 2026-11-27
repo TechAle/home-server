@@ -42,9 +42,13 @@ interface WatchingData {
 }
 
 export interface AniListClient {
-  /** Anime the user is watching or plans to watch. */
+  /** Anime the user is watching, plans to watch or is rewatching. */
   trackedAnime(): Promise<AniListEntry[]>;
-  saveProgress(mediaId: number, progress: number): Promise<void>;
+  saveProgress(
+    mediaId: number,
+    progress: number,
+    status?: "CURRENT" | "REPEATING",
+  ): Promise<void>;
 }
 
 export interface AniListClientOptions {
@@ -135,17 +139,27 @@ export function createAniListClient({
     const byMedia = new Map<number, AniListEntry>();
     for (const list of response.data.MediaListCollection.lists) {
       for (const entry of list.entries) {
-        if (entry.status !== "CURRENT" && entry.status !== "PLANNING") continue;
+        if (
+          entry.status !== "CURRENT" &&
+          entry.status !== "PLANNING" &&
+          entry.status !== "REPEATING"
+        ) {
+          continue;
+        }
         if (!byMedia.has(entry.media.id)) byMedia.set(entry.media.id, entry);
       }
     }
     return [...byMedia.values()];
   }
 
-  async function saveProgress(mediaId: number, progress: number): Promise<void> {
+  async function saveProgress(
+    mediaId: number,
+    progress: number,
+    status: "CURRENT" | "REPEATING" = "CURRENT",
+  ): Promise<void> {
     const response = await executeQuery<{
       SaveMediaListEntry: { id: number; progress: number } | null;
-    }>(SAVE_PROGRESS_MUTATION, { mediaId, progress });
+    }>(SAVE_PROGRESS_MUTATION, { mediaId, progress, status });
 
     if (!response.data?.SaveMediaListEntry) {
       throw new Error("AniList did not save the progress.");

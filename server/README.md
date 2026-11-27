@@ -92,11 +92,13 @@ monkey-patching globals.
 
 ## Streaming links
 
-`GET /get_anime` returns, for every title being watched (`CURRENT`) or planned
-(`PLANNING`), the link of the next episode to watch (`progress + 1`). For each
-title it searches AniSaturn and builds
+`GET /get_anime` returns, for every title being watched (`CURRENT`), planned
+(`PLANNING`) or rewatching (`REPEATING`), the link of the next episode to watch
+(`progress + 1`). For each title it searches AniSaturn and builds
 `https://www.animesaturn.net/anime/{id}/ep-{progress + 1}`. Planned titles start
-at episode 1 and move to `CURRENT` as soon as an episode is marked as watched.
+at episode 1 and move to `CURRENT` as soon as an episode is marked as watched;
+`REPEATING` is preserved when a rewatch progresses. `POST /anime/rewatch` puts
+a title back into `REPEATING` from a chosen progress.
 
 AniSaturn names later seasons with a number or with a subtitle, so the exact
 AniList title often has no result. The search tries, in order:
@@ -118,13 +120,19 @@ it to `server/data/downloads` (the job runs in the background):
 
 `GET /anime/download/<id>` returns `status` (`downloading`/`done`/`error`),
 `progress`, byte counts and, once done, a `playUrl`. `GET
-/anime/downloads?title=…` lists the jobs for one title (including active ones)
-and `DELETE /anime/download/<id>` removes a finished file. The file is served
-by `GET /downloads/<file>` with HTTP Range support, protected by a short-lived
+/anime/downloads?title=…` lists the jobs for one title (including active ones);
+without `title` it returns the completed library across all anime.
+`DELETE /anime/download/<id>` cancels an active download (aborting the transfer
+and removing partial data) or deletes a finished file. The file is served by
+`GET /downloads/<file>` with HTTP Range support, protected by a short-lived
 HMAC signature in the query string (the `<video>` player cannot send the
 Bearer header on range requests). Downloads are capped at 2 GB and the newest
 10 files are kept; set `DOWNLOAD_SECRET` to keep signed links valid across
 restarts.
+
+Each completed entry stores a snapshot of the AniList metadata (media id,
+episode base, status and progress) so the completed library can play an episode
+without looking it up again.
 
 When several results share the base name, the AniList `startDate.year` picks
 the right season (`Ascendance of a Bookworm` 2019 vs `... 4` 2026). Requests
@@ -265,6 +273,7 @@ The unit, sudoers file and paths assume the `alessandro` user with the repo at
 | GET | `/anime/download/:id` | AnimeDownloadManager |
 | GET | `/anime/downloads` | AnimeDownloadManager |
 | DELETE | `/anime/download/:id` | AnimeDownloadManager |
+| POST | `/anime/rewatch` | AnilistManager |
 | GET | `/downloads/:file` | AnimeDownloadManager (signed URL) |
 | GET | `/foundry/status` | FoundryManager |
 | POST | `/foundry/start` | FoundryManager |

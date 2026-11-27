@@ -197,9 +197,31 @@ test("GET /anime/download/:id answers 404 for an unknown job", async () => {
   assert.equal(response.status, 404);
 });
 
-test("GET /anime/downloads requires a title", async () => {
-  const missing = await fetch(`${running.base}/anime/downloads`, { headers: authHeaders() });
-  assert.equal(missing.status, 400);
+test("POST /anime/rewatch validates its body", async () => {
+  const response = await fetch(`${running.base}/anime/rewatch`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mediaId: "nope", progress: -1 }),
+  });
+  assert.equal(response.status, 400);
+
+  const anonymous = await fetch(`${running.base}/anime/rewatch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mediaId: 1, progress: 0 }),
+  });
+  assert.equal(anonymous.status, 401);
+});
+
+test("GET /anime/downloads returns the completed library without a title", async () => {
+  const response = await fetch(`${running.base}/anime/downloads`, {
+    headers: authHeaders(),
+  });
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(await response.json()));
 
   const empty = await fetch(`${running.base}/anime/downloads?title=Nope`, {
     headers: authHeaders(),

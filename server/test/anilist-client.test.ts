@@ -27,8 +27,25 @@ test("saveProgress sends the SaveMediaListEntry mutation", async () => {
     variables: Record<string, unknown>;
   };
   assert.match(body.query, /SaveMediaListEntry/);
-  assert.match(body.query, /status:\s*CURRENT/);
-  assert.deepEqual(body.variables, { mediaId: 42, progress: 7 });
+  assert.deepEqual(body.variables, { mediaId: 42, progress: 7, status: "CURRENT" });
+});
+
+test("saveProgress can keep a rewatch in REPEATING", async () => {
+  let variables: Record<string, unknown> = {};
+  const fetchImpl = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    variables = (JSON.parse(String(init?.body)) as { variables: Record<string, unknown> })
+      .variables;
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { SaveMediaListEntry: { id: 1, progress: 0 } } }),
+    };
+  }) as unknown as typeof fetch;
+
+  const client = createAniListClient({ accessToken: "test-token", fetchImpl });
+  await client.saveProgress(42, 0, "REPEATING");
+
+  assert.deepEqual(variables, { mediaId: 42, progress: 0, status: "REPEATING" });
 });
 
 test("trackedAnime surfaces GraphQL errors with a useful status", async () => {
@@ -78,6 +95,7 @@ test("trackedAnime merges CURRENT and PLANNING entries without duplicates", asyn
                 {
                   entries: [
                     fakeEntry(3, "PLANNING", 0),
+                    fakeEntry(5, "REPEATING", 2),
                     // The same anime can also live in a custom list.
                     fakeEntry(1, "CURRENT", 3),
                     fakeEntry(4, "DROPPED", 2),
@@ -96,7 +114,7 @@ test("trackedAnime merges CURRENT and PLANNING entries without duplicates", asyn
 
   assert.deepEqual(
     entries.map((entry) => entry.media.id).sort((a, b) => a - b),
-    [1, 3],
+    [1, 3, 5],
   );
 });
 

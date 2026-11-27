@@ -115,20 +115,48 @@ export default class AnilistManager {
       body && typeof body === "object" ? (body as Record<string, unknown>) : {};
     const mediaId = Number(payload.mediaId);
     const progress = Number(payload.progress);
+    const status =
+      payload.status === undefined || payload.status === "CURRENT"
+        ? "CURRENT"
+        : payload.status === "REPEATING"
+          ? "REPEATING"
+          : null;
 
     if (
       !Number.isInteger(mediaId) ||
       mediaId <= 0 ||
       !Number.isInteger(progress) ||
-      progress < 0
+      progress < 0 ||
+      status === null
     ) {
+      throw Object.assign(
+        new Error(
+          "mediaId must be a positive integer, progress a non-negative integer and status CURRENT or REPEATING.",
+        ),
+        { status: 400 },
+      );
+    }
+
+    await this.client.saveProgress(mediaId, progress, status);
+    return { mediaId, progress, status };
+  });
+
+  /** Put an anime in AniList's rewatching status, starting from `progress`. */
+  rewatch = route("/anime/rewatch", ["POST"])(async req => {
+    const body: unknown = req.body;
+    const payload =
+      body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+    const mediaId = Number(payload.mediaId);
+    const progress = Number(payload.progress);
+
+    if (!Number.isInteger(mediaId) || mediaId <= 0 || !Number.isInteger(progress) || progress < 0) {
       throw Object.assign(
         new Error("mediaId must be a positive integer and progress a non-negative integer."),
         { status: 400 },
       );
     }
 
-    await this.client.saveProgress(mediaId, progress);
-    return { mediaId, progress };
+    await this.client.saveProgress(mediaId, progress, "REPEATING");
+    return { mediaId, progress, status: "REPEATING" };
   });
 }

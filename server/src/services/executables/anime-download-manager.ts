@@ -33,6 +33,10 @@ export default class AnimeDownloadManager {
       url: typeof body.url === "string" ? body.url : "",
       title: typeof body.title === "string" ? body.title : "",
       episode: Number(body.episode),
+      mediaId: Number(body.mediaId),
+      episodeBase: typeof body.episodeBase === "string" ? body.episodeBase : "",
+      status: typeof body.status === "string" ? body.status : "CURRENT",
+      animeProgress: Number(body.animeProgress),
     });
   });
 
@@ -43,11 +47,8 @@ export default class AnimeDownloadManager {
   });
 
   list = route("/anime/downloads", ["GET"])(async (req): Promise<DownloadView[]> => {
-    const title = typeof req.query.title === "string" ? req.query.title : "";
-    if (!title) {
-      throw Object.assign(new Error("Missing title query parameter."), { status: 400 });
-    }
-    return listDownloads(title);
+    const title = typeof req.query.title === "string" ? req.query.title.trim() : "";
+    return listDownloads(title || undefined);
   });
 
   remove = route("/anime/download/:id", ["DELETE"])(async (req) => {

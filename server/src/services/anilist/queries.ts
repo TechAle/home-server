@@ -28,10 +28,10 @@ export const WATCHING_QUERY = `
   }
 `;
 
-/** Mark one more episode as watched on the user's list. */
+/** Mark an episode as watched; REPEATING keeps a rewatch in progress. */
 export const SAVE_PROGRESS_MUTATION = `
-  mutation SaveProgress($mediaId: Int, $progress: Int) {
-    SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: CURRENT) {
+  mutation SaveProgress($mediaId: Int, $progress: Int, $status: MediaListStatus) {
+    SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
       id
       progress
     }

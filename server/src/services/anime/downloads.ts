@@ -2,8 +2,9 @@
  * Server-side episode downloads.
  *
  * Resolving the player gives a signed MP4 on *.streampeaker.org. The server
- * streams it to `server/data/downloads`, persists a small index so the episode
- * list survives restarts, and serves finished files through signed Range URLs.
+ * streams it to `server/data/downloads`, persists an index (so the completed
+ * library survives restarts) and serves finished files through signed Range
+ * URLs. Active jobs can be cancelled; finished files can be deleted.
  */
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -46,6 +47,13 @@ interface Job {
   total: number;
   error?: string;
   createdAt: number;
+  /** Snapshot of the AniList entry when the download started. */
+  mediaId: number;
+  episodeBase: string;
+  animeStatus: string;
+  animeProgress: number;
+  abort?: AbortController;
+  cancelled?: boolean;
 }
 
 interface StoredDownload {
@@ -56,6 +64,10 @@ interface StoredDownload {
   file: string;
   bytes: number;
   createdAt: number;
+  mediaId?: number;
+  episodeBase?: string;
+  animeStatus?: string;
+  animeProgress?: number;
 }
 
 export interface DownloadView {
@@ -68,14 +80,22 @@ export interface DownloadView {
   bytes: number;
   total: number;
   error?: string;
-  /** Absolute path on the API host; signed for the WebView. */
+  /** Relative URL on the API host; signed for the WebView. */
   playUrl?: string;
+  mediaId: number;
+  episodeBase: string;
+  animeStatus: string;
+  animeProgress: number;
 }
 
 export interface DownloadInput {
   url: string;
   title: string;
   episode: number;
+  mediaId?: number;
+  episodeBase?: string;
+  status?: string;
+  animeProgress?: number;
 }
 
 const jobs = new Map<string, Job>();
@@ -95,6 +115,10 @@ function view(job: Job): DownloadView {
       job.total > 0 ? Math.min(100, Math.round((job.bytes / job.total) * 1000) / 10) : 0,
     bytes: job.bytes,
     total: job.total,
+    mediaId: job.mediaId,
+    episodeBase: job.episodeBase,
+    animeStatus: job.animeStatus,
+    animeProgress: job.animeProgress,
   };
 
   if (job.error) result.error = job.error;
@@ -117,6 +141,10 @@ function saveIndex(): void {
         file: job.file,
         bytes: job.bytes,
         createdAt: job.createdAt,
+        mediaId: job.mediaId,
+        episodeBase: job.episodeBase,
+        animeStatus: job.animeStatus,
+        animeProgress: job.animeProgress,
       }));
     writeFileSync(INDEX_PATH, JSON.stringify({ entries }, null, 2), { mode: 0o600 });
   } catch {
@@ -159,6 +187,11 @@ function loadIndex(): void {
           bytes: info.size,
           total: info.size,
           createdAt: Number(entry.createdAt) || Date.now(),
+          mediaId: Number(entry.mediaId) || 0,
+          episodeBase: typeof entry.episodeBase === "string" ? entry.episodeBase : "",
+          animeStatus:
+            typeof entry.animeStatus === "string" ? entry.animeStatus : "CURRENT",
+          animeProgress: Number(entry.animeProgress) || 0,
         });
       } catch {
         // File removed outside the app: drop the entry.
@@ -187,6 +220,7 @@ async function downloadToFile(
   url: string,
   destination: string,
   onProgress: (bytes: number, total: number) => void,
+  signal: AbortSignal,
 ): Promise<number> {
   const response = await fetch(url, {
     headers: {
@@ -195,7 +229,7 @@ async function downloadToFile(
       Referer: "https://play.saturncdn.net/",
     },
     redirect: "follow",
-    signal: AbortSignal.timeout(30 * 60_000),
+    signal,
   });
 
   if (!response.ok) {
@@ -247,22 +281,41 @@ async function downloadToFile(
 }
 
 async function run(job: Job, pageUrl: string): Promise<void> {
+  const controller = new AbortController();
+  job.abort = controller;
+  const timeout = setTimeout(() => controller.abort(), 30 * 60_000);
+
   try {
     const mediaUrl = await resolveEpisodeMp4(pageUrl);
     job.total = 0;
-    const bytes = await downloadToFile(mediaUrl, join(DOWNLOADS_DIR, job.file), (done, total) => {
-      job.bytes = done;
-      if (total > 0) job.total = total;
-    });
+    const bytes = await downloadToFile(
+      mediaUrl,
+      join(DOWNLOADS_DIR, job.file),
+      (done, total) => {
+        job.bytes = done;
+        if (total > 0) job.total = total;
+      },
+      controller.signal,
+    );
+    if (job.cancelled || !jobs.has(job.id)) return;
+
     job.bytes = bytes;
     job.status = "done";
     saveIndex();
     void cleanup();
   } catch (error) {
+    if (job.cancelled || !jobs.has(job.id)) {
+      await rm(join(DOWNLOADS_DIR, job.file), { force: true });
+      await rm(join(DOWNLOADS_DIR, `${job.file}.part`), { force: true });
+      return;
+    }
     const failure = error as { message?: string };
     job.status = "error";
     job.error = failure.message ?? "Download failed.";
     await rm(join(DOWNLOADS_DIR, job.file), { force: true });
+  } finally {
+    clearTimeout(timeout);
+    job.abort = undefined;
   }
 }
 
@@ -312,6 +365,28 @@ async function cleanup(): Promise<void> {
   }
 }
 
+function metadata(input: DownloadInput): {
+  mediaId: number;
+  episodeBase: string;
+  animeStatus: string;
+  animeProgress: number;
+} {
+  const mediaId = Number(input.mediaId ?? 0);
+  const animeProgress = Number(input.animeProgress ?? 0);
+  const animeStatus = ["CURRENT", "PLANNING", "REPEATING"].includes(
+    String(input.status ?? ""),
+  )
+    ? String(input.status)
+    : "CURRENT";
+
+  return {
+    mediaId: Number.isInteger(mediaId) && mediaId > 0 ? mediaId : 0,
+    episodeBase: typeof input.episodeBase === "string" ? input.episodeBase : "",
+    animeStatus,
+    animeProgress: Number.isInteger(animeProgress) && animeProgress >= 0 ? animeProgress : 0,
+  };
+}
+
 export function startDownload(input: DownloadInput): DownloadView {
   const page = assertEpisodePage(input.url);
   const title = typeof input.title === "string" ? input.title.trim() : "";
@@ -324,6 +399,7 @@ export function startDownload(input: DownloadInput): DownloadView {
     throw httpError(400, "Episode must be a positive integer.");
   }
 
+  const meta = metadata(input);
   const key = `${title.toLowerCase()}|${episode}|${page.toString()}`;
   const file = `${createHash("sha256").update(key).digest("hex").slice(0, 20)}.mp4`;
   const existing = [...jobs.values()].find((job) => job.key === key);
@@ -353,6 +429,7 @@ export function startDownload(input: DownloadInput): DownloadView {
         bytes: info.size,
         total: info.size,
         createdAt: Date.now(),
+        ...meta,
       };
       jobs.set(job.id, job);
       saveIndex();
@@ -378,6 +455,7 @@ export function startDownload(input: DownloadInput): DownloadView {
     bytes: 0,
     total: 0,
     createdAt: Date.now(),
+    ...meta,
   };
 
   jobs.set(id, job);
@@ -391,9 +469,21 @@ export function getDownload(id: string): DownloadView | null {
   return job ? view(job) : null;
 }
 
-export function listDownloads(title: string): DownloadView[] {
+/**
+ * With a title: every job for that anime (active, done, error).
+ * Without a title: the completed library across all anime.
+ */
+export function listDownloads(title?: string): DownloadView[] {
+  const all = [...jobs.values()];
+  if (!title) {
+    return all
+      .filter((job) => job.status === "done")
+      .sort((a, b) => a.title.localeCompare(b.title) || a.episode - b.episode)
+      .map(view);
+  }
+
   const wanted = title.trim().toLowerCase();
-  return [...jobs.values()]
+  return all
     .filter((job) => job.title.toLowerCase() === wanted)
     .sort((a, b) => a.episode - b.episode)
     .map(view);
@@ -402,8 +492,15 @@ export function listDownloads(title: string): DownloadView[] {
 export async function deleteDownload(id: string): Promise<void> {
   const job = jobs.get(id);
   if (!job) throw httpError(404, "Download not found.");
+
   if (job.status === "downloading") {
-    throw httpError(409, "Download is still running.");
+    // Cancel: abort the request, drop the job and clean partial/final files.
+    job.cancelled = true;
+    job.abort?.abort();
+    jobs.delete(id);
+    await rm(join(DOWNLOADS_DIR, `${job.file}.part`), { force: true });
+    await rm(join(DOWNLOADS_DIR, job.file), { force: true });
+    return;
   }
 
   await rm(join(DOWNLOADS_DIR, job.file), { force: true });
