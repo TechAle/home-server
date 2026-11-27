@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { loadExecutables, type LoadedService } from "./loader.js";
 import { createRegistry, type Logger, type Registry } from "./registry.js";
 import type { AppConfig } from "./config.js";
+import { configureAuth } from "./services/auth/index.js";
+import { requireAuth } from "./services/auth/middleware.js";
 
 const here = import.meta.dirname;
 const executablesDir = join(here, "services", "executables");
@@ -31,11 +33,18 @@ function isConfigurable(value: object): value is Configurable {
 
 export async function createApp(config: AppConfig, { log = console }: CreateAppOptions = {}): Promise<CreatedApp> {
   const app = express();
+  app.use(express.json({ limit: "16kb" }));
   const registry = createRegistry({ app, log });
 
   app.get("/", (_req, res) => res.sendFile(join(config.templates, "index.html")));
   app.get("/unsubscribe", (_req, res) => res.sendFile(join(config.templates, "unsubscribe.html")));
   app.get("/admin", (_req, res) => res.sendFile(join(config.templates, "admin.html")));
+
+  // Everything registered from here on needs a valid session token; only the
+  // two public auth routes are exempt (see services/auth/middleware.ts).
+  configureAuth(config.auth);
+  app.use(requireAuth());
+
   app.get("/info", (_req, res) => res.type("text/plain").send("Hello!."));
 
   const loaded = await loadExecutables(executablesDir, registry, {

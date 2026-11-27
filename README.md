@@ -37,6 +37,11 @@ versionato; `server/.env` è ignorato da git.
 |---|---|
 | `ANILIST_CLIENT_SECRET` | <https://anilist.co/settings/developer> (si può rigenerare) |
 | `ANILIST_ACCESS_TOKEN` | Flusso OAuth AniList (authorization code); dura circa un anno |
+| `REGISTRATION_KEY` | Una stringa lunga a tua scelta: serve per registrare un utente (vuota = registrazione disattivata) |
+
+Il server crea `server/data/home-server.db` al primo avvio (ignorato da git).
+I token di sessione sono salvati solo come hash; il client tiene la chiave
+nelle proprie cache e la invia come `Authorization: Bearer`.
 
 Se il token manca, il server parte comunque: `/get_anime` risponde `503` con un
 messaggio che indica di copiare `.env.example` in `.env`.

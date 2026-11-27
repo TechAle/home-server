@@ -29,7 +29,8 @@ Two shared run configurations live in the repository root (`.run/`):
 Environment and configuration live next to the code:
 
 - `configuration.json` — non-secret settings (AniList API, client id, redirect uri)
-- `.env` — secrets (`ANILIST_CLIENT_SECRET`, `ANILIST_ACCESS_TOKEN`)
+- `.env` — secrets (`ANILIST_CLIENT_SECRET`, `ANILIST_ACCESS_TOKEN`, `REGISTRATION_KEY`)
+- `data/home-server.db` — SQLite users/sessions, created on first boot (gitignored)
 - `templates/` — the three HTML stubs
 
 ## Provenance (former Flask backend)
@@ -79,6 +80,11 @@ lives in `src/services/<domain>/` and is never instantiated.
 | `src/services/computer/info.ts` | `/get_computer_info` payload |
 | `src/services/computer/metrics.ts` | temperature, memory, disk, CPU, resource summary |
 | `src/services/computer/platform.ts` | `-591`/`-590` sentinels and OS helpers |
+| `src/services/executables/auth-manager.ts` | class + the `auth/*` routes |
+| `src/services/auth/passwords.ts` | scrypt hashing and verification |
+| `src/services/auth/tokens.ts` | session token generation, SHA-256 and constant-time compare |
+| `src/services/auth/store.ts` | SQLite users and sessions |
+| `src/services/auth/middleware.ts` | Bearer guard for every protected route |
 
 Factories (`createAniListClient`, `createAnisaturnResolver`) accept
 `fetchImpl`/cache options, so the tests inject a fake `fetch` instead of
@@ -119,6 +125,31 @@ the next airing episode is `progress + 1` (the last one is already watched),
 
 `nextEpisode` is `null` when AniList has no upcoming episode scheduled.
 
+## Auth
+
+Registration and login live in `src/services/executables/auth-manager.ts`.
+
+| Method | Path | Public | Notes |
+| --- | --- | --- | --- |
+| POST | `/auth/register` | yes | body `{ username, password, registrationKey }`, answers `201` |
+| POST | `/auth/login` | yes | body `{ username, password }`, answers `200` |
+| POST | `/auth/logout` | no | revokes the current token, answers `204` |
+| GET | `/auth/me` | no | returns `{ user }` |
+
+Every other route (`/get_*`) requires `Authorization: Bearer <token>` and
+answers `401` without a valid key.
+
+- **Passwords**: scrypt with a random 16-byte salt per user; the parameters and
+  salt live inside the stored hash, so the cost can be raised later.
+- **Tokens**: 32 random bytes, returned to the client once. The database keeps
+  only their SHA-256, so a database leak does not leak usable keys.
+- **Sessions**: expire after `SESSION_TTL_DAYS` (default 30) and are cleaned on
+  login; logout deletes the single session row.
+- **Database**: SQLite at `server/data/home-server.db` (gitignored), created on
+  first boot.
+- **Registration**: disabled when `REGISTRATION_KEY` is empty; the key is read
+  from `.env` only, never from the repository.
+
 ## Behaviour notes
 
 - Ports, routes and JSON shapes are the same as the Flask app, including the
@@ -141,11 +172,19 @@ the next airing episode is `progress + 1` (the last one is already watched),
 | GET | `/unsubscribe` | `templates/unsubscribe.html` |
 | GET | `/admin` | `templates/admin.html` |
 | GET | `/info` | plain text `Hello!.` |
+| POST | `/auth/register` | AuthManager (public) |
+| POST | `/auth/login` | AuthManager (public) |
+| POST | `/auth/logout` | AuthManager |
+| GET | `/auth/me` | AuthManager |
 | GET | `/get_computer_info` | ComputerManager |
 | GET | `/get_cpu_temperature` | ComputerManager |
 | GET | `/get_memory_usage` | ComputerManager |
 | GET | `/get_system_resource_info` | ComputerManager |
 | GET | `/get_anime` | AnilistManager |
+
+Every row below `/admin` except `/auth/login` and `/auth/register` requires
+`Authorization: Bearer <token>`; the three HTML pages (`/`, `/unsubscribe`,
+`/admin`) stay public.
 
 ## TypeScript
 

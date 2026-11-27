@@ -4,10 +4,11 @@
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
 /** server/ — the folder that contains configuration.json, .env and templates/. */
-export const serverRoot = new URL("../", import.meta.url).pathname;
+export const serverRoot = fileURLToPath(new URL("../", import.meta.url));
 
 export interface AniListConfig {
   api: string;
@@ -17,8 +18,18 @@ export interface AniListConfig {
   accessToken: string;
 }
 
+export interface AuthConfig {
+  /** SQLite file holding users and sessions. */
+  databasePath: string;
+  /** Static key required by POST /auth/register; empty disables registration. */
+  registrationKey: string;
+  /** How long a session token stays valid. */
+  sessionTtlDays: number;
+}
+
 export interface AppConfig {
   anilist: AniListConfig;
+  auth: AuthConfig;
   templates: string;
 }
 
@@ -28,6 +39,11 @@ interface ConfigurationFile {
     clientId?: string;
     redirectUri?: string;
   };
+}
+
+function positiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 export async function loadConfiguration(root: string = serverRoot): Promise<AppConfig> {
@@ -43,6 +59,11 @@ export async function loadConfiguration(root: string = serverRoot): Promise<AppC
       clientSecret: process.env.ANILIST_CLIENT_SECRET ?? "",
       redirectUri: config.anilist?.redirectUri ?? "",
       accessToken: process.env.ANILIST_ACCESS_TOKEN ?? "",
+    },
+    auth: {
+      databasePath: (process.env.DATABASE_PATH ?? "").trim() || join(root, "data", "home-server.db"),
+      registrationKey: (process.env.REGISTRATION_KEY ?? "").trim(),
+      sessionTtlDays: positiveNumber(process.env.SESSION_TTL_DAYS, 30),
     },
     templates: join(root, "templates"),
   };
