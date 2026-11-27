@@ -68,7 +68,7 @@ function escapeAttribute(value: string): string {
 
 /** Minimal page for a downloaded MP4; the native video controls do the rest. */
 function videoHtml(src: string): string {
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body><video src="${escapeAttribute(src)}" controls autoplay playsinline preload="auto"></video></body></html>`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body><video src="${escapeAttribute(src)}" controls autoplay playsinline preload="auto" tabindex="0"></video><script>(function(){var video=document.querySelector('video');if(!video)return;function focus(){try{video.focus();window.focus();}catch(e){}}video.addEventListener('loadedmetadata',focus);document.addEventListener('click',focus);document.addEventListener('keydown',function(event){var key=event.key||event.code||'';if(key!=='ArrowLeft'&&key!=='ArrowRight'&&key!=='Left'&&key!=='Right')return;event.preventDefault();event.stopPropagation();var delta=(key==='ArrowRight'||key==='Right')?5:-5;var next=video.currentTime+delta;if(next<0)next=0;if(Number.isFinite(video.duration)&&next>video.duration)next=video.duration;video.currentTime=next;},true);focus();})();</script></body></html>`;
 }
 
 interface EpisodePlayerProps {
@@ -231,6 +231,7 @@ export function EpisodePlayer({
         <Text numberOfLines={1} style={styles.title}>
           {title}
         </Text>
+        {playUrl ? <Text style={styles.keyHint}>←/→ 5s</Text> : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Prossimo episodio"
@@ -367,6 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b1420',
   },
   title: {flex: 1, fontSize: 13.5, fontWeight: '600', color: '#e8f0fc'},
+  keyHint: {fontSize: 11, fontWeight: '600', color: '#93a9c9'},
   action: {fontSize: 13, fontWeight: '600', color: '#e8f0fc'},
   notice: {
     paddingHorizontal: 16,
