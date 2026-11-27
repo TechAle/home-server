@@ -24,13 +24,24 @@ export function formatCount(value: number): string {
 }
 
 /** "adesso", "12s fa", "5 min fa", "2 h fa". */
-export function formatAgo(timestamp: number | null | undefined): string {
-  if (!timestamp) {return '—';}
-  const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
-  if (seconds < 15) {return 'adesso';}
-  if (seconds < 60) {return `${seconds}s fa`;}
+export function formatAgo(
+  timestamp: number | null | undefined,
+  now: number = Date.now(),
+): string {
+  if (!timestamp) {
+    return '—';
+  }
+  const seconds = Math.max(0, Math.round((now - timestamp) / 1000));
+  if (seconds < 15) {
+    return 'adesso';
+  }
+  if (seconds < 60) {
+    return `${seconds}s fa`;
+  }
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) {return `${minutes} min fa`;}
+  if (minutes < 60) {
+    return `${minutes} min fa`;
+  }
   const hours = Math.round(minutes / 60);
   return `${hours} h fa`;
 }

@@ -1,4 +1,5 @@
 import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {useNow} from '../../hooks/useNow';
 import {formatAgo} from '../../lib/format';
 import {useTheme} from '../../theme';
 
@@ -18,6 +19,7 @@ export function PageHead({
   onRefresh,
 }: PageHeadProps) {
   const theme = useTheme();
+  const now = useNow();
 
   return (
     <View style={styles.head}>
@@ -59,7 +61,7 @@ export function PageHead({
               <Text style={[styles.pillText, {color: theme.colors.ink2}]}>
                 {status.online ? 'Online' : 'Offline'} ·{' '}
                 <Text style={{color: theme.colors.ink, fontWeight: '700'}}>
-                  {formatAgo(status.updatedAt)}
+                  {formatAgo(status.updatedAt, now)}
                 </Text>
               </Text>
             </View>

@@ -4,7 +4,7 @@
  * The loader instantiates services with no arguments, so this is a factory the
  * service calls lazily; `fetchImpl` can be injected in tests.
  */
-import { CURRENT_USER_QUERY, WATCHING_QUERY } from "./queries.js";
+import { CURRENT_USER_QUERY, SAVE_PROGRESS_MUTATION, WATCHING_QUERY } from "./queries.js";
 
 export interface AniListTitle {
   english?: string | null;
@@ -12,6 +12,7 @@ export interface AniListTitle {
 }
 
 export interface AniListMedia {
+  id: number;
   title: AniListTitle;
   startDate?: { year?: number | null } | null;
   nextAiringEpisode?: { airingAt?: number | null; episode?: number | null } | null;
@@ -39,6 +40,7 @@ interface WatchingData {
 
 export interface AniListClient {
   watchingAnime(): Promise<AniListEntry[]>;
+  saveProgress(mediaId: number, progress: number): Promise<void>;
 }
 
 export interface AniListClientOptions {
@@ -98,5 +100,15 @@ export function createAniListClient({
     return response.data.MediaListCollection.lists[0]?.entries ?? [];
   }
 
-  return { watchingAnime };
+  async function saveProgress(mediaId: number, progress: number): Promise<void> {
+    const response = await executeQuery<{
+      SaveMediaListEntry: { id: number; progress: number } | null;
+    }>(SAVE_PROGRESS_MUTATION, { mediaId, progress });
+
+    if (!response.data?.SaveMediaListEntry) {
+      throw new Error("AniList did not save the progress.");
+    }
+  }
+
+  return { watchingAnime, saveProgress };
 }

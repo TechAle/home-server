@@ -1,0 +1,310 @@
+import {useEffect, useState} from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {WebView} from 'react-native-webview';
+import {resolveEpisodeEmbed} from '../../../lib/anisaturn';
+import {errorMessage} from '../../../lib/errors';
+import {useAnimeLinks, useMarkWatched} from '../../../queries/anilist';
+import {useTheme} from '../../../theme';
+
+/** Same browser identity the server uses for AniSaturn. */
+const ANISATURN_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36';
+
+/** Disable popups, alerts and target=_blank links inside the player. */
+const NO_POPUPS_JS = `
+(function () {
+  try {
+    window.open = function () { return null; };
+    window.alert = function () {};
+    window.confirm = function () { return false; };
+    window.prompt = function () { return null; };
+    document.addEventListener('click', function (event) {
+      var node = event.target;
+      while (node && node !== document) {
+        if (node.tagName === 'A' && node.target === '_blank') {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        node = node.parentNode;
+      }
+    }, true);
+  } catch (error) {}
+})();
+true;
+`;
+
+/** Only the resolved /embed/ page may be loaded; every other navigation is dropped. */
+function isAllowedEmbedRequest(requestUrl: string, embedUrl: string): boolean {
+  if (requestUrl === 'about:blank') {return true;}
+  if (/^(?:data|blob):/i.test(requestUrl)) {return true;}
+
+  const allowed = /^https:\/\/([^/?#]+)(\/embed\/[^?#]*)/i.exec(embedUrl);
+  if (!allowed) {return false;}
+  const target = /^https:\/\/([^/?#]+)(\/embed\/[^?#]*)/i.exec(requestUrl);
+  if (!target) {return false;}
+
+  const trim = (value: string) => value.replace(/\/+$/, '');
+  return (
+    target[1].toLowerCase() === allowed[1].toLowerCase() &&
+    trim(target[2]) === trim(allowed[2])
+  );
+}
+
+interface EpisodePlayerProps {
+  /** AniSaturn episode page; the client extracts the player iframe from it. */
+  url: string;
+  title: string;
+  mediaId: number;
+  progress: number;
+  onNext: (stream: {
+    title: string;
+    url: string;
+    mediaId: number;
+    progress: number;
+  }) => void;
+  onClose: () => void;
+}
+
+export function EpisodePlayer({
+  url,
+  title,
+  mediaId,
+  progress,
+  onNext,
+  onClose,
+}: EpisodePlayerProps) {
+  const theme = useTheme();
+  const anime = useAnimeLinks();
+  const markWatched = useMarkWatched();
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(true);
+  const [webviewLoading, setWebviewLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  const [nextLoading, setNextLoading] = useState(false);
+  const [nextError, setNextError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setResolving(true);
+    setEmbedUrl(null);
+    setError('');
+    setNextError('');
+
+    resolveEpisodeEmbed(url)
+      .then(resolvedUrl => {
+        if (!cancelled) {
+          setEmbedUrl(resolvedUrl);
+          setWebviewLoading(true);
+        }
+      })
+      .catch(reason => {
+        if (!cancelled) {setError(errorMessage(reason));}
+      })
+      .finally(() => {
+        if (!cancelled) {setResolving(false);}
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url, attempt]);
+
+  const openInBrowser = () => {
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const handleNext = async () => {
+    if (nextLoading) return;
+
+    setNextLoading(true);
+    setNextError('');
+    const newProgress = progress + 1;
+
+    try {
+      await markWatched.mutateAsync({mediaId, progress: newProgress});
+      const result = await anime.refetch();
+      const entry = result.data?.[title];
+
+      if (!entry?.link[0]) {
+        setNextError(
+          'Episodio segnato come visto, ma il successivo non è ancora disponibile.',
+        );
+        return;
+      }
+
+      onNext({title, url: entry.link[0], mediaId, progress: newProgress});
+    } catch (nextFailure) {
+      setNextError(errorMessage(nextFailure));
+    } finally {
+      setNextLoading(false);
+    }
+  };
+
+  const loading = resolving || (Boolean(embedUrl) && webviewLoading);
+
+  return (
+    <SafeAreaView
+      style={[
+        styles.root,
+        Platform.OS === 'android' && {paddingTop: StatusBar.currentHeight ?? 0},
+      ]}>
+      <View style={styles.bar}>
+        <Text numberOfLines={1} style={styles.title}>
+          {title}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Prossimo episodio"
+          disabled={nextLoading}
+          onPress={handleNext}>
+          <Text
+            style={[
+              styles.action,
+              {
+                color: theme.colors.accent,
+                opacity: nextLoading ? 0.6 : 1,
+              },
+            ]}>
+            {nextLoading ? '…' : 'Prossimo episodio'}
+          </Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={openInBrowser}>
+          <Text style={[styles.action, {color: theme.colors.accent}]}>
+            Browser
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Chiudi"
+          onPress={onClose}>
+          <Text style={styles.action}>✕</Text>
+        </Pressable>
+      </View>
+
+      {nextError ? (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>{nextError}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.video}>
+        {embedUrl ? (
+          <WebView
+            source={{uri: embedUrl}}
+            style={styles.webview}
+            userAgent={ANISATURN_USER_AGENT}
+            originWhitelist={['*']}
+            javaScriptEnabled
+            domStorageEnabled
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            allowsFullscreenVideo
+            setSupportMultipleWindows={false}
+            javaScriptCanOpenWindowsAutomatically={false}
+            onShouldStartLoadWithRequest={request =>
+              isAllowedEmbedRequest(request.url, embedUrl ?? '')
+            }
+            injectedJavaScriptBeforeContentLoaded={NO_POPUPS_JS}
+            injectedJavaScript={NO_POPUPS_JS}
+            injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
+            injectedJavaScriptForMainFrameOnly={false}
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            onLoadStart={() => setWebviewLoading(true)}
+            onLoadEnd={() => setWebviewLoading(false)}
+            onError={event => {
+              setWebviewLoading(false);
+              setError(
+                event.nativeEvent.description ??
+                  'Impossibile caricare il player.',
+              );
+            }}
+            onHttpError={event => {
+              setWebviewLoading(false);
+              setError(`HTTP ${event.nativeEvent.statusCode}`);
+            }}
+          />
+        ) : null}
+
+        {loading ? (
+          <View pointerEvents="none" style={styles.center}>
+            <ActivityIndicator color={theme.colors.accent} size="large" />
+            {resolving ? (
+              <Text style={styles.loadingText}>Preparazione del player…</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {error && !resolving ? (
+          <View style={[styles.center, styles.errorOverlay]}>
+            <Text style={styles.error}>{error}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setAttempt(value => value + 1)}>
+              <Text style={[styles.action, {color: theme.colors.accent}]}>
+                Riprova
+              </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={openInBrowser}>
+              <Text style={[styles.action, {color: theme.colors.accent}]}>
+                Apri nel browser
+              </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={onClose}>
+              <Text style={styles.action}>Chiudi</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    backgroundColor: '#000',
+  },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#0b1420',
+  },
+  title: {flex: 1, fontSize: 13.5, fontWeight: '600', color: '#e8f0fc'},
+  action: {fontSize: 13, fontWeight: '600', color: '#e8f0fc'},
+  notice: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(229, 72, 77, 0.16)',
+  },
+  noticeText: {fontSize: 12, color: '#ff8f95'},
+  video: {flex: 1},
+  webview: {flex: 1, backgroundColor: '#000'},
+  center: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
+  },
+  loadingText: {fontSize: 12.5, color: '#93a9c9'},
+  errorOverlay: {backgroundColor: 'rgba(0, 0, 0, 0.82)'},
+  error: {fontSize: 13, color: '#ff8f95', textAlign: 'center'},
+});

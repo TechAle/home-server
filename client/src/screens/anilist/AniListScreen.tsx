@@ -13,15 +13,34 @@ import {Card} from '../../components/ui/Card';
 import {PageHead} from '../../components/ui/PageHead';
 import {StatusBadge} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
+import {useNow} from '../../hooks/useNow';
 import {formatAgo, formatAiring} from '../../lib/format';
 import {useAnimeLinks} from '../../queries/anilist';
 import {useTheme} from '../../theme';
+import {EpisodeActions} from './components/EpisodeActions';
 
-export function AniListScreen() {
+interface AniListScreenProps {
+  onPlay: (stream: {
+    title: string;
+    url: string;
+    mediaId: number;
+    progress: number;
+  }) => void;
+}
+
+export function AniListScreen({onPlay}: AniListScreenProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const anime = useAnimeLinks();
+  const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
+  const [choice, setChoice] = useState<{
+    title: string;
+    episode: number;
+    url: string;
+    mediaId: number;
+    progress: number;
+  } | null>(null);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -38,17 +57,18 @@ export function AniListScreen() {
   ).length;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refresh}
-          tintColor={theme.colors.accent}
-          colors={[theme.colors.accent]}
-        />
-      }>
-      <View style={styles.content}>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={theme.colors.accent}
+            colors={[theme.colors.accent]}
+          />
+        }>
+        <View style={styles.content}>
         <PageHead
           eyebrow="Servizio"
           title="AniList"
@@ -76,7 +96,7 @@ export function AniListScreen() {
           </Card>
           <Card style={styles.summaryCard}>
             <Text style={[styles.summaryValue, {color: theme.colors.ink}]}>
-              {formatAgo(anime.dataUpdatedAt)}
+              {formatAgo(anime.dataUpdatedAt, now)}
             </Text>
             <Text style={[styles.summaryLabel, {color: theme.colors.muted}]}>
               Aggiornato
@@ -116,15 +136,41 @@ export function AniListScreen() {
               </View>
 
               {item.link.length > 0 ? (
-                <Pressable
-                  accessibilityRole="link"
-                  onPress={() => {
-                    Linking.openURL(item.link[0]).catch(() => {});
-                  }}>
-                  <Text style={[styles.link, {color: theme.colors.accent}]}>
-                    Apri episodio {item.progress + 1} →
-                  </Text>
-                </Pressable>
+                <View style={styles.actions}>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => {
+                      Linking.openURL(item.link[0]).catch(() => {});
+                    }}>
+                    <Text style={[styles.link, {color: theme.colors.accent}]}>
+                      Apri episodio {item.progress + 1} →
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() =>
+                      setChoice({
+                        title,
+                        episode: item.progress + 1,
+                        url: item.link[0],
+                        mediaId: item.mediaId,
+                        progress: item.progress,
+                      })
+                    }
+                    style={[
+                      styles.play,
+                      {backgroundColor: theme.colors.accent},
+                    ]}>
+                    <Text
+                      style={[
+                        styles.playText,
+                        {color: theme.colors.onAccent},
+                      ]}>
+                      Esegui ep
+                    </Text>
+                  </Pressable>
+                </View>
               ) : item.nextEpisode ? (
                 <Text style={[styles.note, {color: theme.colors.muted}]}>
                   Prossimo ep. {item.nextEpisode.episode ?? '—'} ·{' '}
@@ -140,10 +186,31 @@ export function AniListScreen() {
         </View>
       </View>
     </ScrollView>
+
+      <EpisodeActions
+        visible={Boolean(choice)}
+        title={choice?.title ?? ''}
+        episode={choice?.episode ?? 0}
+        onClose={() => setChoice(null)}
+        onStream={() => {
+          if (!choice) {
+            return;
+          }
+          onPlay({
+            title: choice.title,
+            url: choice.url,
+            mediaId: choice.mediaId,
+            progress: choice.progress,
+          });
+          setChoice(null);
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {flex: 1},
   scroll: {paddingBottom: 48},
   content: {
     width: '100%',
@@ -161,6 +228,9 @@ const styles = StyleSheet.create({
   row: {gap: 8},
   rowHead: {flexDirection: 'row', alignItems: 'center', gap: 10},
   rowTitle: {flex: 1, fontSize: 14.5, fontWeight: '700', letterSpacing: -0.2},
+  actions: {flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap'},
+  play: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8},
+  playText: {fontSize: 12, fontWeight: '700'},
   link: {fontSize: 13, fontWeight: '600'},
   note: {fontSize: 12.5, lineHeight: 18},
 });

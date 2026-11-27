@@ -144,6 +144,25 @@ test("GET /get_system_resource_info returns cpu, ram and disk", async () => {
   assert.deepEqual(Object.keys(body.disk).sort(), ["free_gib", "percent_used", "total_gib", "used_gib"]);
 });
 
+test("POST /anime/watched validates its body", async () => {
+  const response = await fetch(`${running.base}/anime/watched`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mediaId: "nope", progress: -1 }),
+  });
+  assert.equal(response.status, 400);
+
+  const anonymous = await fetch(`${running.base}/anime/watched`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mediaId: 1, progress: 1 }),
+  });
+  assert.equal(anonymous.status, 401);
+});
+
 test("GET /get_anime answers 503 once authenticated but without an AniList token", async () => {
   const response = await fetch(`${running.base}/get_anime`, { headers: authHeaders() });
   assert.equal(response.status, 503);

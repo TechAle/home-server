@@ -14,6 +14,7 @@ import type { AniListConfig } from "../../config.js";
 import type { Logger } from "../../registry.js";
 
 export interface AnimeToWatch {
+  mediaId: number;
   progress: number;
   link: string[];
   nextEpisode: NextEpisode | null;
@@ -77,9 +78,37 @@ export default class AnilistManager {
 
     const toWatch: ToWatch = {};
     candidates.forEach(({ entry, title, nextEpisode }, index) => {
-      toWatch[title] = { progress: entry.progress, link: links[index] ?? [], nextEpisode };
+      toWatch[title] = {
+        mediaId: entry.media.id,
+        progress: entry.progress,
+        link: links[index] ?? [],
+        nextEpisode,
+      };
     });
 
     return toWatch;
+  });
+
+  markWatched = route("/anime/watched", ["POST"])(async req => {
+    const body: unknown = req.body;
+    const payload =
+      body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+    const mediaId = Number(payload.mediaId);
+    const progress = Number(payload.progress);
+
+    if (
+      !Number.isInteger(mediaId) ||
+      mediaId <= 0 ||
+      !Number.isInteger(progress) ||
+      progress < 0
+    ) {
+      throw Object.assign(
+        new Error("mediaId must be a positive integer and progress a non-negative integer."),
+        { status: 400 },
+      );
+    }
+
+    await this.client.saveProgress(mediaId, progress);
+    return { mediaId, progress };
   });
 }

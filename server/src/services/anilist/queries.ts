@@ -14,6 +14,7 @@ export const WATCHING_QUERY = `
       lists {
         entries {
           media {
+            id
             title { english romaji }
             startDate { year }
             nextAiringEpisode { airingAt episode }
@@ -21,6 +22,16 @@ export const WATCHING_QUERY = `
           progress
         }
       }
+    }
+  }
+`;
+
+/** Mark one more episode as watched on the user's list. */
+export const SAVE_PROGRESS_MUTATION = `
+  mutation SaveProgress($mediaId: Int, $progress: Int) {
+    SaveMediaListEntry(mediaId: $mediaId, progress: $progress) {
+      id
+      progress
     }
   }
 `;

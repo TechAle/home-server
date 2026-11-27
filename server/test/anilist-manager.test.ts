@@ -30,6 +30,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                     {
                       progress: 6,
                       media: {
+                        id: 101,
                         title: { english: "The World's Strongest Witch", romaji: "Sekai Saikyou no Majo" },
                         startDate: { year: 2026 },
                         nextAiringEpisode: { episode: 7, airingAt },
@@ -38,6 +39,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                     {
                       progress: 0,
                       media: {
+                        id: 202,
                         title: { english: "Frieren: Beyond Journey's End", romaji: "Sousou no Frieren" },
                         startDate: { year: 2023 },
                         nextAiringEpisode: null,
@@ -71,11 +73,13 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
     "The World's Strongest Witch",
   ]);
   assert.deepEqual(toWatch["The World's Strongest Witch"], {
+    mediaId: 101,
     progress: 6,
     link: [],
     nextEpisode: { episode: 7, airingAt, airingAtIso: new Date(airingAt * 1000).toISOString() },
   });
   assert.deepEqual(toWatch["Frieren: Beyond Journey's End"], {
+    mediaId: 202,
     progress: 0,
     link: ["https://www.animesaturn.net/anime/frieren-QEd4Q/ep-1"],
     nextEpisode: null,

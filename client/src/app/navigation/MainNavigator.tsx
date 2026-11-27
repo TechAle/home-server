@@ -14,6 +14,7 @@ import {DashboardScreen} from '../../screens/dashboard/DashboardScreen';
 import {FilesScreen} from '../../screens/files/FilesScreen';
 import {MediaScreen} from '../../screens/media/MediaScreen';
 import {RaspberryScreen} from '../../screens/raspberry/RaspberryScreen';
+import {EpisodePlayer} from '../../screens/anilist/components/EpisodePlayer';
 import {Drawer} from './Drawer';
 import type {MainRoute} from './routes';
 import {TopBar} from './TopBar';
@@ -22,6 +23,12 @@ export function MainNavigator() {
   const logout = useLogout();
   const [route, setRoute] = useState<MainRoute>('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [stream, setStream] = useState<{
+    title: string;
+    url: string;
+    mediaId: number;
+    progress: number;
+  } | null>(null);
 
   const navigate = (next: MainRoute) => {
     setRoute(next);
@@ -33,7 +40,7 @@ export function MainNavigator() {
       case 'raspberry':
         return <RaspberryScreen />;
       case 'anilist':
-        return <AniListScreen />;
+        return <AniListScreen onPlay={setStream} />;
       case 'files':
         return <FilesScreen />;
       case 'media':
@@ -72,6 +79,17 @@ export function MainNavigator() {
           onLogout={() => logout.mutate()}
         />
       </SafeAreaView>
+
+      {stream ? (
+        <EpisodePlayer
+          url={stream.url}
+          title={stream.title}
+          mediaId={stream.mediaId}
+          progress={stream.progress}
+          onNext={setStream}
+          onClose={() => setStream(null)}
+        />
+      ) : null}
     </View>
   );
 }

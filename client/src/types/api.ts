@@ -58,6 +58,7 @@ export interface NextEpisode {
 }
 
 export interface AnimeToWatch {
+  mediaId: number;
   progress: number;
   link: string[];
   nextEpisode: NextEpisode | null;

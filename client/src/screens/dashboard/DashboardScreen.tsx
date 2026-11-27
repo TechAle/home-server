@@ -12,6 +12,7 @@ import {PageHead} from '../../components/ui/PageHead';
 import {ServiceCard} from '../../components/ui/ServiceCard';
 import type {StatusTone} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
+import {useNow} from '../../hooks/useNow';
 import {
   formatAgo,
   formatGib,
@@ -45,6 +46,7 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
   const info = useComputerInfo();
   const resources = useSystemResources();
   const anime = useAnimeLinks();
+  const now = useNow();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -121,7 +123,7 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
       stats={[
         {label: 'In visione', value: String(titles.length)},
         {label: 'In attesa', value: String(waiting)},
-        {label: 'Aggiornato', value: formatAgo(anime.dataUpdatedAt)},
+        {label: 'Aggiornato', value: formatAgo(anime.dataUpdatedAt, now)},
       ]}
       footer={anime.isError ? errorMessage(anime.error) : undefined}
     />,
