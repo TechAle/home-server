@@ -28,6 +28,8 @@ export function MainNavigator() {
     url: string;
     mediaId: number;
     progress: number;
+    mode: 'stream' | 'file';
+    playUrl?: string;
   } | null>(null);
 
   const navigate = (next: MainRoute) => {
@@ -83,6 +85,7 @@ export function MainNavigator() {
       {stream ? (
         <EpisodePlayer
           url={stream.url}
+          playUrl={stream.playUrl}
           title={stream.title}
           mediaId={stream.mediaId}
           progress={stream.progress}

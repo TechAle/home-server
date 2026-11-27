@@ -67,4 +67,18 @@ export interface AnimeToWatch {
   nextEpisode: NextEpisode | null;
 }
 
+export type AnimeDownloadStatus = 'downloading' | 'done' | 'error';
+
+export interface AnimeDownload {
+  id: string;
+  title: string;
+  episode: number;
+  status: AnimeDownloadStatus;
+  progress: number;
+  bytes: number;
+  total: number;
+  error?: string;
+  playUrl?: string;
+}
+
 export type ToWatch = Record<string, AnimeToWatch>;

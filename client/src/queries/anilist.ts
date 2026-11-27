@@ -1,9 +1,10 @@
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import {fetchAnimeLinks, markAnimeWatched} from '../api/anilist';
+  fetchAnimeDownload,
+  fetchAnimeLinks,
+  markAnimeWatched,
+  startAnimeDownload,
+} from '../api/anilist';
 import {queryKeys} from './keys';
 
 /** The server caches AniSaturn for six hours; keep the client copy fresh too. */
@@ -24,5 +25,20 @@ export function useMarkWatched() {
       markAnimeWatched(mediaId, progress),
     onSuccess: () =>
       queryClient.invalidateQueries({queryKey: queryKeys.anilist.toWatch}),
+  });
+}
+
+/** Start a server-side download; the returned job is polled separately. */
+export function useStartAnimeDownload() {
+  return useMutation({mutationFn: startAnimeDownload});
+}
+
+export function useAnimeDownload(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.anilist.download(id ?? ''),
+    queryFn: () => fetchAnimeDownload(id as string),
+    enabled: Boolean(id),
+    refetchInterval: query =>
+      query.state.data?.status === 'downloading' ? 1000 : false,
   });
 }

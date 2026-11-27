@@ -8,6 +8,7 @@ export const queryKeys = {
   },
   anilist: {
     toWatch: ['anilist', 'to-watch'] as const,
+    download: (id: string) => ['anilist', 'download', id] as const,
   },
   foundry: {
     status: ['foundry', 'status'] as const,

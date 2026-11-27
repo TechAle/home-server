@@ -61,9 +61,20 @@ function isAllowedEmbedRequest(requestUrl: string, embedUrl: string): boolean {
   );
 }
 
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+/** Minimal page for a downloaded MP4; the native video controls do the rest. */
+function videoHtml(src: string): string {
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body><video src="${escapeAttribute(src)}" controls autoplay playsinline preload="auto"></video></body></html>`;
+}
+
 interface EpisodePlayerProps {
   /** AniSaturn episode page; the client extracts the player iframe from it. */
   url: string;
+  /** Direct MP4 of a server-side download; skips the embed resolution. */
+  playUrl?: string;
   title: string;
   mediaId: number;
   progress: number;
@@ -72,12 +83,15 @@ interface EpisodePlayerProps {
     url: string;
     mediaId: number;
     progress: number;
+    mode: 'stream' | 'file';
+    playUrl?: string;
   }) => void;
   onClose: () => void;
 }
 
 export function EpisodePlayer({
   url,
+  playUrl,
   title,
   mediaId,
   progress,
@@ -103,6 +117,15 @@ export function EpisodePlayer({
     setError('');
     setNextError('');
 
+    if (playUrl) {
+      setEmbedUrl(playUrl);
+      setResolving(false);
+      setWebviewLoading(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     resolveEpisodeEmbed(url)
       .then(resolvedUrl => {
         if (!cancelled) {
@@ -120,10 +143,10 @@ export function EpisodePlayer({
     return () => {
       cancelled = true;
     };
-  }, [url, attempt]);
+  }, [url, playUrl, attempt]);
 
   const openInBrowser = () => {
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(playUrl ?? url).catch(() => {});
   };
 
   const handleNext = async () => {
@@ -145,7 +168,7 @@ export function EpisodePlayer({
         return;
       }
 
-      onNext({title, url: entry.link[0], mediaId, progress: newProgress});
+      onNext({title, url: entry.link[0], mediaId, progress: newProgress, mode: 'stream'});
     } catch (nextFailure) {
       setNextError(errorMessage(nextFailure));
     } finally {
@@ -209,7 +232,7 @@ export function EpisodePlayer({
       <View style={styles.video}>
         {embedUrl ? (
           <WebView
-            source={{uri: embedUrl}}
+            source={playUrl ? {html: videoHtml(playUrl)} : {uri: embedUrl}}
             style={styles.webview}
             userAgent={ANISATURN_USER_AGENT}
             originWhitelist={['*']}
@@ -221,7 +244,7 @@ export function EpisodePlayer({
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
             onShouldStartLoadWithRequest={request =>
-              isAllowedEmbedRequest(request.url, embedUrl ?? '')
+              playUrl ? true : isAllowedEmbedRequest(request.url, embedUrl ?? '')
             }
             injectedJavaScriptBeforeContentLoaded={NO_POPUPS_JS}
             injectedJavaScript={NO_POPUPS_JS}

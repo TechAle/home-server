@@ -18,6 +18,7 @@ import {formatAgo, formatAiring} from '../../lib/format';
 import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
 import {cursorPointer, useTheme} from '../../theme';
 import {EpisodeActions} from './components/EpisodeActions';
+import {DownloadOverlay} from './components/DownloadOverlay';
 
 interface AniListScreenProps {
   onPlay: (stream: {
@@ -25,6 +26,8 @@ interface AniListScreenProps {
     url: string;
     mediaId: number;
     progress: number;
+    mode: 'stream' | 'file';
+    playUrl?: string;
   }) => void;
 }
 
@@ -50,6 +53,13 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     message: string;
   } | null>(null);
   const [choice, setChoice] = useState<{
+    title: string;
+    episode: number;
+    url: string;
+    mediaId: number;
+    progress: number;
+  } | null>(null);
+  const [download, setDownload] = useState<{
     title: string;
     episode: number;
     url: string;
@@ -336,10 +346,36 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             url: choice.url,
             mediaId: choice.mediaId,
             progress: choice.progress,
+            mode: 'stream',
           });
           setChoice(null);
         }}
+        onDownload={() => {
+          if (!choice) {
+            return;
+          }
+          setDownload(choice);
+          setChoice(null);
+        }}
       />
+
+      {download ? (
+        <DownloadOverlay
+          request={download}
+          onDone={playUrl => {
+            onPlay({
+              title: download.title,
+              url: download.url,
+              mediaId: download.mediaId,
+              progress: download.progress,
+              mode: 'file',
+              playUrl,
+            });
+            setDownload(null);
+          }}
+          onClose={() => setDownload(null)}
+        />
+      ) : null}
     </View>
   );
 }

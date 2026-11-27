@@ -1,4 +1,3 @@
-import {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Button} from '../../../components/ui/Button';
 import {Card} from '../../../components/ui/Card';
@@ -10,6 +9,7 @@ interface EpisodeActionsProps {
   episode: number;
   onClose: () => void;
   onStream: () => void;
+  onDownload: () => void;
 }
 
 export function EpisodeActions({
@@ -18,15 +18,9 @@ export function EpisodeActions({
   episode,
   onClose,
   onStream,
+  onDownload,
 }: EpisodeActionsProps) {
   const theme = useTheme();
-  const [notice, setNotice] = useState('');
-
-  useEffect(() => {
-    if (visible) {
-      setNotice('');
-    }
-  }, [visible]);
 
   if (!visible) {return null;}
 
@@ -56,15 +50,8 @@ export function EpisodeActions({
         <Button
           label="Scarica ed esegui"
           variant="ghost"
-          onPress={() =>
-            setNotice('Download in arrivo: per ora usa Stream esegui.')
-          }
+          onPress={onDownload}
         />
-        {notice ? (
-          <Text style={[styles.notice, {color: theme.colors.warn}]}>
-            {notice}
-          </Text>
-        ) : null}
 
         <Button label="Annulla" variant="ghost" onPress={onClose} />
       </Card>
@@ -83,5 +70,4 @@ const styles = StyleSheet.create({
   },
   title: {fontSize: 18, fontWeight: '700', letterSpacing: -0.3},
   hint: {fontSize: 13, marginBottom: 2},
-  notice: {fontSize: 12, lineHeight: 18},
 });
