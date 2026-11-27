@@ -8,7 +8,11 @@ export function isUnavailable(value: number | null | undefined): boolean {
 }
 
 export function formatPercent(value: number | null | undefined): string {
-  return isUnavailable(value) ? '—' : `${Math.round(value as number)}%`;
+  if (isUnavailable(value)) {
+    return '—';
+  }
+  const rounded = Math.round((value as number) * 10) / 10;
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
 }
 
 export function formatTemperature(value: number | null | undefined): string {
