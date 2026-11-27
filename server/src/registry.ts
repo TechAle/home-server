@@ -58,8 +58,12 @@ export function createRegistry({ app, log = console }: RegistryOptions): Registr
       } catch (error) {
         const err = error as { status?: unknown; message?: string };
         log.error?.(`[route] ${method} ${url} failed:`, err?.message ?? error);
-        const status = Number.isInteger(err?.status) ? (err.status as number) : 500;
-        if (!res.headersSent) res.status(status).json({ error: err?.message ?? "Internal error" });
+        const hasStatus = Number.isInteger(err?.status);
+        const status = hasStatus ? (err.status as number) : 500;
+        // Intentional errors carry a status and a user-facing message; unexpected
+        // ones must not leak SQLite/TypeError internals to the client.
+        const message = hasStatus ? err?.message ?? "Internal error" : "Internal error";
+        if (!res.headersSent) res.status(status).json({ error: message });
       }
     };
   }

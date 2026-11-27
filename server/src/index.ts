@@ -4,6 +4,7 @@
 import type { Server } from "node:http";
 import { createApp } from "./app.js";
 import { loadConfiguration } from "./config.js";
+import { closeAuth } from "./services/auth/index.js";
 
 const config = await loadConfiguration();
 const { app, registry } = await createApp(config);
@@ -21,7 +22,21 @@ const server: Server = app.listen(port, host, () => {
 function shutdown(signal: string): void {
   console.info(`[app] ${signal} received, shutting down`);
   registry.stop();
-  server.close(() => process.exit(0));
+
+  // Do not let a hung AniSaturn/AniList request block Docker's stop timeout.
+  const force = setTimeout(() => {
+    console.warn("[app] forced shutdown after 5s");
+    server.closeAllConnections();
+    closeAuth();
+    process.exit(0);
+  }, 5_000);
+  force.unref();
+
+  server.close(() => {
+    clearTimeout(force);
+    closeAuth();
+    process.exit(0);
+  });
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"));

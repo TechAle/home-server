@@ -38,6 +38,16 @@ const PASSWORD_MAX_LENGTH = 200;
 
 let store: AuthStore | null = null;
 let config: AuthConfig | null = null;
+let dummyHash: Promise<string> | null = null;
+
+/**
+ * A real scrypt hash for a throwaway password, used for unknown usernames so
+ * login timing does not reveal whether an account exists.
+ */
+function dummyPasswordHash(): Promise<string> {
+  dummyHash ??= hashPassword("timing-equalizer");
+  return dummyHash;
+}
 
 export function configureAuth(next: AuthConfig): void {
   store?.close();
@@ -132,7 +142,12 @@ export async function login(input: LoginInput): Promise<AuthSession> {
   }
 
   const user = authStore.findUserByUsername(username);
-  const passwordMatches = user ? await verifyPassword(password, user.passwordHash) : false;
+  // Unknown users must still pay the scrypt cost, otherwise response timing
+  // reveals which usernames exist.
+  const passwordMatches = await verifyPassword(
+    password,
+    user ? user.passwordHash : await dummyPasswordHash(),
+  );
   if (!user || !passwordMatches) {
     throw authError(401, "Invalid username or password.");
   }

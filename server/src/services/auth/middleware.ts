@@ -9,6 +9,12 @@ import { authenticate } from "./index.js";
 
 const PUBLIC_PATHS = new Set(["/auth/login", "/auth/register"]);
 
+/** Express routes ignore case and a trailing slash; the guard must too. */
+function publicPath(path: string): string {
+  const normalized = path.replace(/\/+$/, "").toLowerCase();
+  return normalized || "/";
+}
+
 export function bearerToken(req: Request): string {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) return "";
@@ -17,7 +23,7 @@ export function bearerToken(req: Request): string {
 
 export function requireAuth() {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (PUBLIC_PATHS.has(req.path)) {
+    if (PUBLIC_PATHS.has(publicPath(req.path))) {
       next();
       return;
     }

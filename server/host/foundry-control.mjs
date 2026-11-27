@@ -27,7 +27,9 @@ if (!TOKEN) {
 }
 
 function tokenMatches(header) {
-  const provided = String(header ?? "").replace(/^Bearer\s+/i, "").trim();
+  const value = String(header ?? "");
+  if (!value.startsWith("Bearer ")) return false;
+  const provided = value.slice("Bearer ".length).trim();
   const a = createHash("sha256").update(provided).digest();
   const b = createHash("sha256").update(TOKEN).digest();
   return timingSafeEqual(a, b);

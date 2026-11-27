@@ -167,6 +167,17 @@ test("POST /foundry/start requires helper configuration", async () => {
   assert.equal(response.status, 503);
 });
 
+test("public auth routes accept a trailing slash", async () => {
+  const response = await fetch(`${running.base}/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "nobody", password: "wrong-password" }),
+  });
+  assert.equal(response.status, 401);
+  const body = (await response.json()) as { error: string };
+  assert.match(body.error, /Invalid username or password/);
+});
+
 test("POST /anime/watched validates its body", async () => {
   const response = await fetch(`${running.base}/anime/watched`, {
     method: "POST",

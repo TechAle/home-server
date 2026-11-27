@@ -31,6 +31,22 @@ test("saveProgress sends the SaveMediaListEntry mutation", async () => {
   assert.deepEqual(body.variables, { mediaId: 42, progress: 7 });
 });
 
+test("trackedAnime surfaces GraphQL errors with a useful status", async () => {
+  const fetchImpl = (async () =>
+    new Response(JSON.stringify({ errors: [{ message: "Invalid token", status: 401 }] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })) as unknown as typeof fetch;
+
+  const client = createAniListClient({ accessToken: "expired", fetchImpl });
+
+  await assert.rejects(
+    client.trackedAnime(),
+    (error: { status?: number; message?: string }) =>
+      error.status === 503 && /Invalid token/.test(error.message ?? ""),
+  );
+});
+
 function fakeEntry(id: number, status: string, progress: number) {
   return {
     status,

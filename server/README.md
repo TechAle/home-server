@@ -156,13 +156,16 @@ answers `401` without a valid key.
 
 ```sh
 cp .env.example .env
-mkdir -p data   # must be writable by uid 1000 (the container's node user)
+mkdir -p data
+sudo chown -R 1000:1000 data   # the container runs as uid 1000 (node)
 docker compose up -d --build
 ```
 
 The compose file uses host networking so the API can bind loopback only
 (`127.0.0.1:5000`, with Caddy in front) and reach the Foundry helper on
-`127.0.0.1:5050`. SQLite lives in `server/data`.
+`127.0.0.1:5050`. Host networking also lets the container reach other host
+loopback services, which is intentional here. SQLite lives in `server/data` and
+must be writable by uid 1000; the container drops all Linux capabilities.
 
 ## Foundry control
 
@@ -178,6 +181,9 @@ Install it once on the Raspberry:
 
 ```sh
 sudo cp server/host/foundry-control.service /etc/systemd/system/
+sudo cp server/host/foundry-control.sudoers /etc/sudoers.d/foundry-control
+sudo chmod 440 /etc/sudoers.d/foundry-control
+sudo visudo -cf /etc/sudoers.d/foundry-control
 sudo systemctl daemon-reload
 sudo systemctl enable --now foundry-control
 ```

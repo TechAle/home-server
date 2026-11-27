@@ -27,6 +27,7 @@ export interface AniListEntry {
 
 export interface AniListResponse<T> {
   data: T;
+  errors?: Array<{ message?: string; status?: number }>;
 }
 
 interface ViewerData {
@@ -76,13 +77,42 @@ export function createAniListClient({
         Accept: "application/json",
       },
       body: JSON.stringify({ query, variables }),
+      // A stalled AniList request must not wedge /get_anime forever.
+      signal: AbortSignal.timeout(10_000),
     });
 
+    const body = (await response.json().catch(() => null)) as AniListResponse<T> | null;
+
     if (!response.ok) {
-      throw new Error(`GraphQL query failed with status ${response.status}`);
+      const message =
+        body?.errors?.[0]?.message ?? `GraphQL query failed with status ${response.status}`;
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status === 429
+            ? 429
+            : 502;
+      throw Object.assign(new Error(`AniList: ${message}`), { status });
     }
 
-    return (await response.json()) as AniListResponse<T>;
+    if (body?.errors?.length) {
+      const first = body.errors[0];
+      const status = first.status === 401 || first.status === 403
+        ? 503
+        : first.status === 429
+          ? 429
+          : 502;
+      throw Object.assign(
+        new Error(`AniList: ${first.message ?? "request failed"}`),
+        { status },
+      );
+    }
+
+    if (!body?.data) {
+      throw Object.assign(new Error("AniList returned an empty response."), { status: 502 });
+    }
+
+    return body;
   }
 
   async function currentUserId(): Promise<number> {

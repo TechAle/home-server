@@ -1,0 +1,3 @@
+# Allow the Foundry helper to restart only its systemd unit, without opening a
+# password prompt. Install as /etc/sudoers.d/foundry-control (mode 0440).
+alessandro ALL=(root) NOPASSWD: /bin/systemctl restart foundry-script.service

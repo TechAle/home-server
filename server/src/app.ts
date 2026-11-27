@@ -39,13 +39,12 @@ function isConfigurable(value: object): value is Configurable {
 
 /**
  * `TRUST_PROXY=1` (one reverse proxy, e.g. Caddy on localhost) makes `req.ip`
- * the client address from `X-Forwarded-For`. Never enable it when the server is
- * reachable directly: clients could spoof the header and bypass the limits.
+ * the client address from `X-Forwarded-For`. Only numeric hop counts are
+ * accepted: `true` would trust the whole header and let clients spoof their IP.
  */
 function trustProxySetting(): number | boolean {
   const raw = process.env.TRUST_PROXY?.trim();
   if (!raw) return false;
-  if (raw === "true") return true;
   const hops = Number(raw);
   return Number.isInteger(hops) && hops >= 0 ? hops : false;
 }
@@ -65,6 +64,8 @@ export async function createApp(
   app.set("trust proxy", trustProxySetting());
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
+    // Responses include session tokens and personal data: never cache them.
+    res.setHeader("Cache-Control", "no-store");
     next();
   });
   app.use(express.json({ limit: "16kb" }));

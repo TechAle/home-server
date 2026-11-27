@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the Node server from its own directory so relative paths resolve.
+# Start the built server (run `npm run build` first).
 set -euo pipefail
 cd "$(dirname "$0")"
-exec node src/index.js
+exec node dist/index.js

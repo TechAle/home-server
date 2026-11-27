@@ -18,7 +18,9 @@ export interface ComputerInfo {
 
 async function externalIp(): Promise<string | number> {
   try {
-    const response = await fetch("https://api.ipify.org");
+    const response = await fetch("https://api.ipify.org", {
+      signal: AbortSignal.timeout(5_000),
+    });
     if (!response.ok) return UNAVAILABLE;
     return (await response.text()).trim();
   } catch {

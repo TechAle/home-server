@@ -175,6 +175,8 @@ export function createAnisaturnResolver({
 
       const response = await fetchImpl(`${baseUrl}/api/search?q=${encodeURIComponent(query)}`, {
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        // Serialised queue: one stalled request must not block every title.
+        signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
         throw httpError(`AniSaturn search for "${query}" failed with status ${response.status}`, 502);
