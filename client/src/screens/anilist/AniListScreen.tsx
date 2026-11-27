@@ -29,6 +29,7 @@ interface AniListScreenProps {
     url: string;
     mediaId: number;
     progress: number;
+    episode: number;
     mode: 'stream' | 'file';
     playUrl?: string;
   }) => void;
@@ -351,6 +352,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             url: choice.url,
             mediaId: choice.mediaId,
             progress: choice.progress,
+            episode: choice.episode,
             mode: 'stream',
           });
           setChoice(null);
@@ -378,7 +380,8 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
               title: download.title,
               url: `${download.episodeBase}/ep-${episode}`,
               mediaId: download.mediaId,
-              progress: episode - 1,
+              progress: download.progress,
+              episode,
               mode: 'file',
               playUrl,
             });

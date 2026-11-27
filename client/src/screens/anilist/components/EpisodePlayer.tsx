@@ -77,12 +77,16 @@ interface EpisodePlayerProps {
   playUrl?: string;
   title: string;
   mediaId: number;
+  /** AniList progress before opening this player. */
   progress: number;
+  /** Episode currently being watched (1-based). */
+  episode: number;
   onNext: (stream: {
     title: string;
     url: string;
     mediaId: number;
     progress: number;
+    episode: number;
     mode: 'stream' | 'file';
     playUrl?: string;
   }) => void;
@@ -95,6 +99,7 @@ export function EpisodePlayer({
   title,
   mediaId,
   progress,
+  episode,
   onNext,
   onClose,
 }: EpisodePlayerProps) {
@@ -154,7 +159,10 @@ export function EpisodePlayer({
 
     setNextLoading(true);
     setNextError('');
-    const newProgress = progress + 1;
+    // Rewatching an older downloaded episode must not lower the AniList
+    // progress: mark the furthest episode between the current progress and the
+    // one being watched.
+    const newProgress = Math.max(progress, episode);
 
     try {
       await markWatched.mutateAsync({mediaId, progress: newProgress});
@@ -168,7 +176,14 @@ export function EpisodePlayer({
         return;
       }
 
-      onNext({title, url: entry.link[0], mediaId, progress: newProgress, mode: 'stream'});
+      onNext({
+        title,
+        url: entry.link[0],
+        mediaId,
+        progress: newProgress,
+        episode: newProgress + 1,
+        mode: 'stream',
+      });
     } catch (nextFailure) {
       setNextError(errorMessage(nextFailure));
     } finally {
