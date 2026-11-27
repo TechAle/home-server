@@ -57,8 +57,11 @@ export interface NextEpisode {
   airingAtIso: string | null;
 }
 
+export type AnimeListStatus = 'CURRENT' | 'PLANNING';
+
 export interface AnimeToWatch {
   mediaId: number;
+  status: AnimeListStatus;
   progress: number;
   link: string[];
   nextEpisode: NextEpisode | null;

@@ -19,6 +19,7 @@ export interface AniListMedia {
 }
 
 export interface AniListEntry {
+  status: string;
   progress: number;
   score?: number | null;
   media: AniListMedia;
@@ -39,7 +40,8 @@ interface WatchingData {
 }
 
 export interface AniListClient {
-  watchingAnime(): Promise<AniListEntry[]>;
+  /** Anime the user is watching or plans to watch. */
+  trackedAnime(): Promise<AniListEntry[]>;
   saveProgress(mediaId: number, progress: number): Promise<void>;
 }
 
@@ -90,14 +92,23 @@ export function createAniListClient({
     return viewerId;
   }
 
-  async function watchingAnime(): Promise<AniListEntry[]> {
+  async function trackedAnime(): Promise<AniListEntry[]> {
     const userId = await currentUserId();
+    // No status filter: one request returns every list, including custom ones.
     const response = await executeQuery<WatchingData>(WATCHING_QUERY, {
       type: "ANIME",
-      status: "CURRENT",
       userId,
     });
-    return response.data.MediaListCollection.lists[0]?.entries ?? [];
+
+    // An entry can appear in both its status list and a custom list.
+    const byMedia = new Map<number, AniListEntry>();
+    for (const list of response.data.MediaListCollection.lists) {
+      for (const entry of list.entries) {
+        if (entry.status !== "CURRENT" && entry.status !== "PLANNING") continue;
+        if (!byMedia.has(entry.media.id)) byMedia.set(entry.media.id, entry);
+      }
+    }
+    return [...byMedia.values()];
   }
 
   async function saveProgress(mediaId: number, progress: number): Promise<void> {
@@ -110,5 +121,5 @@ export function createAniListClient({
     }
   }
 
-  return { watchingAnime, saveProgress };
+  return { trackedAnime, saveProgress };
 }

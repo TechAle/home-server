@@ -60,6 +60,8 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
   };
 
   const titles = Object.values(anime.data ?? {});
+  const watching = titles.filter(item => item.status === 'CURRENT').length;
+  const planning = titles.filter(item => item.status === 'PLANNING').length;
   const waiting = titles.filter(
     item => Boolean(item.nextEpisode) && item.link.length === 0,
   ).length;
@@ -121,7 +123,8 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
       loading={anime.isPending}
       onPress={() => onOpen('anilist')}
       stats={[
-        {label: 'In visione', value: String(titles.length)},
+        {label: 'In visione', value: String(watching)},
+        {label: 'Pianificati', value: String(planning)},
         {label: 'In attesa', value: String(waiting)},
         {label: 'Aggiornato', value: formatAgo(anime.dataUpdatedAt, now)},
       ]}

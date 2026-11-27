@@ -19,6 +19,7 @@ export const WATCHING_QUERY = `
             startDate { year }
             nextAiringEpisode { airingAt episode }
           }
+          status
           progress
         }
       }
@@ -29,7 +30,7 @@ export const WATCHING_QUERY = `
 /** Mark one more episode as watched on the user's list. */
 export const SAVE_PROGRESS_MUTATION = `
   mutation SaveProgress($mediaId: Int, $progress: Int) {
-    SaveMediaListEntry(mediaId: $mediaId, progress: $progress) {
+    SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: CURRENT) {
       id
       progress
     }

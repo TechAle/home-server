@@ -80,6 +80,12 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   };
 
   const entries = Object.entries(anime.data ?? {});
+  const watching = entries.filter(
+    ([, item]) => item.status === 'CURRENT',
+  ).length;
+  const planning = entries.filter(
+    ([, item]) => item.status === 'PLANNING',
+  ).length;
   const waiting = entries.filter(
     ([, item]) => Boolean(item.nextEpisode) && item.link.length === 0,
   ).length;
@@ -108,10 +114,18 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
         <View style={styles.summary}>
           <Card style={styles.summaryCard}>
             <Text style={[styles.summaryValue, {color: theme.colors.ink}]}>
-              {entries.length}
+              {watching}
             </Text>
             <Text style={[styles.summaryLabel, {color: theme.colors.muted}]}>
               In visione
+            </Text>
+          </Card>
+          <Card style={styles.summaryCard}>
+            <Text style={[styles.summaryValue, {color: theme.colors.ink}]}>
+              {planning}
+            </Text>
+            <Text style={[styles.summaryLabel, {color: theme.colors.muted}]}>
+              Pianificati
             </Text>
           </Card>
           <Card style={styles.summaryCard}>
@@ -158,8 +172,18 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                   {title}
                 </Text>
                 <StatusBadge
-                  tone={item.link.length ? 'ok' : 'muted'}
-                  label={`Ep. ${item.progress}`}
+                  tone={
+                    item.status === 'PLANNING'
+                      ? 'muted'
+                      : item.link.length
+                        ? 'ok'
+                        : 'muted'
+                  }
+                  label={
+                    item.status === 'PLANNING'
+                      ? 'Pianificato'
+                      : `Ep. ${item.progress}`
+                  }
                 />
               </View>
 

@@ -72,7 +72,7 @@ lives in `src/services/<domain>/` and is never instantiated.
 | File | Role |
 | --- | --- |
 | `src/services/executables/anilist-manager.ts` | class + `/get_anime` route (the only AniList file the loader sees) |
-| `src/services/anilist/client.ts` | `createAniListClient()`: viewer id, watching list |
+| `src/services/anilist/client.ts` | `createAniListClient()`: viewer id, current + planning lists |
 | `src/services/anilist/links.ts` | AniSaturn search, matching, `nextEpisodeLink()`, cache and pacing |
 | `src/services/anilist/next-episode.ts` | `nextEpisodeState()`: waiting + `nextEpisode` schedule |
 | `src/services/anilist/queries.ts` | GraphQL documents |
@@ -92,9 +92,11 @@ monkey-patching globals.
 
 ## Streaming links
 
-`GET /get_anime` returns, for every title currently being watched, the link of
-the next episode to watch (`progress + 1`). For each title it searches
-AniSaturn and builds `https://www.animesaturn.net/anime/{id}/ep-{progress + 1}`.
+`GET /get_anime` returns, for every title being watched (`CURRENT`) or planned
+(`PLANNING`), the link of the next episode to watch (`progress + 1`). For each
+title it searches AniSaturn and builds
+`https://www.animesaturn.net/anime/{id}/ep-{progress + 1}`. Planned titles start
+at episode 1 and move to `CURRENT` as soon as an episode is marked as watched.
 
 AniSaturn names later seasons with a number or with a subtitle, so the exact
 AniList title often has no result. The search tries, in order:

@@ -28,6 +28,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                 {
                   entries: [
                     {
+                      status: "CURRENT",
                       progress: 6,
                       media: {
                         id: 101,
@@ -37,6 +38,7 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
                       },
                     },
                     {
+                      status: "PLANNING",
                       progress: 0,
                       media: {
                         id: 202,
@@ -74,12 +76,14 @@ test("getAnime keeps airing titles with link [] and a nextEpisode schedule", asy
   ]);
   assert.deepEqual(toWatch["The World's Strongest Witch"], {
     mediaId: 101,
+    status: "CURRENT",
     progress: 6,
     link: [],
     nextEpisode: { episode: 7, airingAt, airingAtIso: new Date(airingAt * 1000).toISOString() },
   });
   assert.deepEqual(toWatch["Frieren: Beyond Journey's End"], {
     mediaId: 202,
+    status: "PLANNING",
     progress: 0,
     link: ["https://www.animesaturn.net/anime/frieren-QEd4Q/ep-1"],
     nextEpisode: null,

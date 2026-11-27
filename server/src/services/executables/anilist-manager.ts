@@ -4,7 +4,7 @@
  * `executables/` so the loader never instantiates them.
  *
  * Output shape:
- *   { [animeTitle]: { progress: number, link: string[], nextEpisode: object | null } }
+ *   { [animeTitle]: { mediaId, status, progress, link, nextEpisode } }
  */
 import { route } from "../../rules.js";
 import { createAniListClient, type AniListClient, type AniListEntry } from "../anilist/client.js";
@@ -15,6 +15,7 @@ import type { Logger } from "../../registry.js";
 
 export interface AnimeToWatch {
   mediaId: number;
+  status: string;
   progress: number;
   link: string[];
   nextEpisode: NextEpisode | null;
@@ -54,9 +55,9 @@ export default class AnilistManager {
   }
 
   getAnime = route("/get_anime", ["GET"])(async (): Promise<ToWatch> => {
-    const watching = await this.client.watchingAnime();
+    const tracked = await this.client.trackedAnime();
 
-    const candidates: Candidate[] = watching
+    const candidates: Candidate[] = tracked
       .filter((entry) => Boolean(entry.media.title.english || entry.media.title.romaji))
       .map((entry) => {
         const title = (entry.media.title.english || entry.media.title.romaji) as string;
@@ -80,6 +81,7 @@ export default class AnilistManager {
     candidates.forEach(({ entry, title, nextEpisode }, index) => {
       toWatch[title] = {
         mediaId: entry.media.id,
+        status: entry.status,
         progress: entry.progress,
         link: links[index] ?? [],
         nextEpisode,
