@@ -13,7 +13,7 @@ export default class FoundryManager {
   });
 
   start = route("/foundry/start", ["POST"])(async () => {
-    await this.#control.restart();
+    await this.#control.start();
     return { ok: true };
   });
 

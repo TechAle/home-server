@@ -91,14 +91,14 @@ test("GET /foundry/status uses the helper and keeps auth", async () => {
   assert.ok(helperCalls.includes("GET /status"));
 });
 
-test("POST /foundry/start restarts Foundry through the helper", async () => {
+test("POST /foundry/start asks the helper to start, not restart", async () => {
   const response = await fetch(`${base}/foundry/start`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
-  assert.ok(helperCalls.includes("POST /restart"));
+  assert.ok(helperCalls.includes("POST /start"));
 });
 
 test("the helper token is required and never exposed by the API", async () => {

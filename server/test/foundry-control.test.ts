@@ -60,6 +60,21 @@ test("status reports an unconfigured helper without calling it", async () => {
   assert.match(status.error ?? "", /FOUNDRY_CONTROL_TOKEN/);
 });
 
+test("start posts to the helper without restarting", async () => {
+  let captured = "";
+  const control = createFoundryControl({
+    baseUrl,
+    token: "secret",
+    fetchImpl: (async (url: RequestInfo | URL, init?: RequestInit) => {
+      captured = `${init?.method} ${String(url)}`;
+      return jsonResponse({ ok: true });
+    }) as unknown as typeof fetch,
+  });
+
+  await control.start();
+  assert.equal(captured, `POST ${baseUrl}/start`);
+});
+
 test("restart posts to the helper and propagates failures", async () => {
   let captured = "";
   const control = createFoundryControl({

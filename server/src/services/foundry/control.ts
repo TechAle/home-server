@@ -14,6 +14,8 @@ export interface FoundryStatus {
 
 export interface FoundryControl {
   status(): Promise<FoundryStatus>;
+  /** Start Foundry only when the port is closed. */
+  start(): Promise<void>;
   restart(): Promise<void>;
 }
 
@@ -84,6 +86,10 @@ export function createFoundryControl({
           error: failure.message ?? "Foundry helper unreachable.",
         };
       }
+    },
+
+    async start() {
+      await call("/start", "POST");
     },
 
     async restart() {

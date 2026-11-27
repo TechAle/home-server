@@ -90,7 +90,18 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    if (req.method === "POST" && (pathname === "/start" || pathname === "/restart")) {
+    if (req.method === "POST" && pathname === "/start") {
+      // Never drop live sessions: starting an already-online server is a no-op.
+      if (await foundryOnline()) {
+        sendJson(res, 200, { ok: true, alreadyOnline: true });
+        return;
+      }
+      await restartService();
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/restart") {
       await restartService();
       sendJson(res, 200, { ok: true });
       return;

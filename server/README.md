@@ -189,7 +189,12 @@ sudo systemctl enable --now foundry-control
 ```
 
 The helper never opens, closes or reconfigures Foundry's port: it only checks
-the port and restarts the systemd unit that owns the process.
+the port and restarts the systemd unit that owns the process. `/start` is a
+no-op when Foundry is already listening, so it cannot drop live sessions; only
+`/restart` restarts an online server.
+
+The unit, sudoers file and paths assume the `alessandro` user with the repo at
+`~/Desktop/home-server`; adjust them when deploying elsewhere.
 
 ## Behaviour notes
 
