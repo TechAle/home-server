@@ -17,7 +17,7 @@ import {TextField} from '../../components/ui/TextField';
 import {ThemeToggle} from '../../components/ui/ThemeToggle';
 import {errorMessage} from '../../lib/errors';
 import {useRegister} from '../../queries/auth';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 interface RegisterScreenProps {
   onLogin: () => void;
@@ -144,7 +144,7 @@ export function RegisterScreen({onLogin, onToggleTheme}: RegisterScreenProps) {
               <Pressable
                 accessibilityRole="button"
                 onPress={onLogin}
-                style={styles.footer}>
+                style={[styles.footer, cursorPointer]}>
                 <Text style={[styles.footerText, {color: theme.colors.muted}]}>
                   Hai già un account?{' '}
                   <Text

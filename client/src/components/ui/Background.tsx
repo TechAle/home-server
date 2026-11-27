@@ -8,7 +8,8 @@
  * (so nothing ever "teleports" into view).
  */
 import {useEffect, useMemo, useState} from 'react';
-import {StyleSheet, View, useWindowDimensions} from 'react-native';
+import {StyleSheet, View} from 'react-native';
+import {useWindowSize} from '../../hooks/useWindowSize';
 import {useTheme, type Theme} from '../../theme';
 
 /** Timers never start under Jest: they would keep the test process alive. */
@@ -415,7 +416,7 @@ function Clouds({
 
 export function Background({variant}: {variant: 'login' | 'home'}) {
   const theme = useTheme();
-  const {width, height} = useWindowDimensions();
+  const {width, height} = useWindowSize();
 
   // In the dark theme the persistent VantaLayer in RootShell owns the night
   // background; in light it is the day sky below.
@@ -424,7 +425,14 @@ export function Background({variant}: {variant: 'login' | 'home'}) {
   }
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: theme.colors.skyTop,
+        },
+      ]}>
       <Sky theme={theme} height={height} />
       {theme.mode === 'dark' ? (
         <>

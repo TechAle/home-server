@@ -1,6 +1,6 @@
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {Brand} from '../../components/ui/Brand';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 import {MAIN_NAV, type MainRoute} from './routes';
 
 interface DrawerProps {
@@ -44,7 +44,11 @@ export function Drawer({
         ]}>
         <View style={styles.head}>
           <Brand />
-          <Pressable accessibilityRole="button" onPress={onClose} hitSlop={8}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onClose}
+            hitSlop={8}
+            style={cursorPointer}>
             <Text style={[styles.close, {color: theme.colors.muted}]}>✕</Text>
           </Pressable>
         </View>
@@ -58,6 +62,7 @@ export function Drawer({
                 onPress={() => onNavigate(item.id)}
                 style={[
                   styles.item,
+                  cursorPointer,
                   selected && {backgroundColor: theme.colors.accentSoft},
                 ]}>
                 <Text
@@ -79,7 +84,7 @@ export function Drawer({
         <Pressable
           accessibilityRole="button"
           onPress={onLogout}
-          style={[styles.logout, {borderTopColor: theme.colors.line}]}>
+          style={[styles.logout, cursorPointer, {borderTopColor: theme.colors.line}]}>
           <Text style={[styles.logoutText, {color: theme.colors.danger}]}>
             Esci
           </Text>

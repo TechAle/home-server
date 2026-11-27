@@ -18,7 +18,7 @@ import {ThemeToggle} from '../../components/ui/ThemeToggle';
 import {errorMessage} from '../../lib/errors';
 import {useLogin} from '../../queries/auth';
 import {useSettingsStore} from '../../store/settings';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 interface LoginScreenProps {
   onRegister: () => void;
@@ -123,7 +123,7 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
               <Pressable
                 accessibilityRole="button"
                 onPress={onRegister}
-                style={styles.footer}>
+                style={[styles.footer, cursorPointer]}>
                 <Text style={[styles.footerText, {color: theme.colors.muted}]}>
                   Non hai un account?{' '}
                   <Text

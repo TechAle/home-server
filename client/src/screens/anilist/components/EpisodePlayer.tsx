@@ -14,7 +14,7 @@ import {WebView} from 'react-native-webview';
 import {resolveEpisodeEmbed} from '../../../lib/anisaturn';
 import {errorMessage} from '../../../lib/errors';
 import {useAnimeLinks, useMarkWatched} from '../../../queries/anilist';
-import {useTheme} from '../../../theme';
+import {cursorPointer, useTheme} from '../../../theme';
 
 /** Same browser identity the server uses for AniSaturn. */
 const ANISATURN_USER_AGENT =
@@ -169,7 +169,8 @@ export function EpisodePlayer({
           accessibilityRole="button"
           accessibilityLabel="Prossimo episodio"
           disabled={nextLoading}
-          onPress={handleNext}>
+          onPress={handleNext}
+          style={nextLoading ? undefined : cursorPointer}>
           <Text
             style={[
               styles.action,
@@ -181,7 +182,10 @@ export function EpisodePlayer({
             {nextLoading ? '…' : 'Prossimo episodio'}
           </Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={openInBrowser}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={openInBrowser}
+          style={cursorPointer}>
           <Text style={[styles.action, {color: theme.colors.accent}]}>
             Browser
           </Text>
@@ -189,7 +193,8 @@ export function EpisodePlayer({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Chiudi"
-          onPress={onClose}>
+          onPress={onClose}
+          style={cursorPointer}>
           <Text style={styles.action}>✕</Text>
         </Pressable>
       </View>
@@ -253,17 +258,24 @@ export function EpisodePlayer({
             <Text style={styles.error}>{error}</Text>
             <Pressable
               accessibilityRole="button"
-              onPress={() => setAttempt(value => value + 1)}>
+              onPress={() => setAttempt(value => value + 1)}
+              style={cursorPointer}>
               <Text style={[styles.action, {color: theme.colors.accent}]}>
                 Riprova
               </Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={openInBrowser}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={openInBrowser}
+              style={cursorPointer}>
               <Text style={[styles.action, {color: theme.colors.accent}]}>
                 Apri nel browser
               </Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={onClose}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              style={cursorPointer}>
               <Text style={styles.action}>Chiudi</Text>
             </Pressable>
           </View>

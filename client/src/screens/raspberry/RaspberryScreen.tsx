@@ -6,11 +6,11 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import {Card} from '../../components/ui/Card';
 import {MetricBar} from '../../components/ui/MetricBar';
 import {PageHead} from '../../components/ui/PageHead';
+import {useWindowSize} from '../../hooks/useWindowSize';
 import {
   formatGib,
   formatPercent,
@@ -37,7 +37,7 @@ function externalIp(value: string | number | undefined): string {
 export function RaspberryScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const {width} = useWindowDimensions();
+  const {width} = useWindowSize();
   const info = useComputerInfo();
   const resources = useSystemResources();
   const [refreshing, setRefreshing] = useState(false);

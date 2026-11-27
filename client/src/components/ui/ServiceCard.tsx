@@ -1,5 +1,5 @@
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 import {Card} from './Card';
 import {StatusBadge, type StatusTone} from './StatusBadge';
 
@@ -79,7 +79,7 @@ export function ServiceCard({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({pressed}) => (pressed ? styles.pressed : undefined)}>
+      style={({pressed}) => [cursorPointer, pressed && styles.pressed]}>
       {content}
     </Pressable>
   );

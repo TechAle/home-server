@@ -1,7 +1,7 @@
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNow} from '../../hooks/useNow';
 import {formatAgo} from '../../lib/format';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 export interface PageHeadProps {
   eyebrow?: string;
@@ -74,6 +74,7 @@ export function PageHead({
               onPress={onRefresh}
               style={({pressed}) => [
                 styles.refresh,
+                cursorPointer,
                 {
                   backgroundColor: theme.colors.card,
                   borderColor: theme.colors.line,

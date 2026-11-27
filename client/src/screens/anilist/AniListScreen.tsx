@@ -16,7 +16,7 @@ import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
 import {formatAgo, formatAiring} from '../../lib/format';
 import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 import {EpisodeActions} from './components/EpisodeActions';
 
 interface AniListScreenProps {
@@ -167,6 +167,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                 <View style={styles.actions}>
                   <Pressable
                     accessibilityRole="link"
+                    style={cursorPointer}
                     onPress={() => {
                       Linking.openURL(item.link[0]).catch(() => {});
                     }}>
@@ -184,6 +185,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                     }
                     style={[
                       styles.ghost,
+                      marking === title ? undefined : cursorPointer,
                       {
                         borderColor: theme.colors.accent,
                         opacity: marking === title ? 0.6 : 1,
@@ -207,6 +209,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                     }
                     style={[
                       styles.play,
+                      cursorPointer,
                       {backgroundColor: theme.colors.accent},
                     ]}>
                     <Text

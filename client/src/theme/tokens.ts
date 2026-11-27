@@ -33,3 +33,15 @@ export const cardShadow: ViewStyle =
       shadowRadius: 18,
     },
   }) ?? {};
+
+/**
+ * Desktop builds show a pointer cursor over anything interactive; iOS and
+ * Android ignore the style.
+ */
+export const cursorPointer: ViewStyle =
+  Platform.select<ViewStyle>({
+    macos: {cursor: 'pointer'},
+    windows: {cursor: 'pointer'},
+    web: {cursor: 'pointer'},
+    default: {},
+  }) ?? {};

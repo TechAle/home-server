@@ -3,13 +3,13 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import {Brand} from '../../components/ui/Brand';
 import {Button} from '../../components/ui/Button';
 import {ThemeToggle} from '../../components/ui/ThemeToggle';
 import {useClock} from '../../hooks/useClock';
-import {useTheme} from '../../theme';
+import {useWindowSize} from '../../hooks/useWindowSize';
+import {cursorPointer, useTheme} from '../../theme';
 import {MAIN_NAV, type MainRoute} from './routes';
 
 const WIDE_BREAKPOINT = 900;
@@ -30,7 +30,7 @@ export function TopBar({
   loggingOut,
 }: TopBarProps) {
   const theme = useTheme();
-  const {width} = useWindowDimensions();
+  const {width} = useWindowSize();
   const wide = width >= WIDE_BREAKPOINT;
   const now = useClock();
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(
@@ -53,6 +53,7 @@ export function TopBar({
           onPress={onOpenMenu}
           style={[
             styles.menu,
+            cursorPointer,
             {
               backgroundColor: theme.colors.card,
               borderColor: theme.colors.line,
@@ -74,6 +75,7 @@ export function TopBar({
                 onPress={() => onNavigate(item.id)}
                 style={[
                   styles.navButton,
+                  cursorPointer,
                   selected && {backgroundColor: theme.colors.accent},
                 ]}>
                 <Text

@@ -7,7 +7,8 @@
  * opaque Vanta canvas covers it.
  */
 import {useMemo} from 'react';
-import {StyleSheet, View, useWindowDimensions} from 'react-native';
+import {StyleSheet, View} from 'react-native';
+import {useWindowSize} from '../../hooks/useWindowSize';
 import {VantaBackground} from './VantaBackground';
 
 const NET_COLOR = '#4f8cff';
@@ -57,7 +58,7 @@ function computeLines(dots: Dot[]): Line[] {
 }
 
 export function VantaLayer({visible}: {visible: boolean}) {
-  const {width, height} = useWindowDimensions();
+  const {width, height} = useWindowSize();
 
   // Static on purpose: no per-frame recomputation, so it cannot glitch.
   const dots = useMemo(

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import type {MainRoute} from '../../app/navigation/routes';
 import {PageHead} from '../../components/ui/PageHead';
@@ -13,6 +12,7 @@ import {ServiceCard} from '../../components/ui/ServiceCard';
 import type {StatusTone} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
+import {useWindowSize} from '../../hooks/useWindowSize';
 import {
   formatAgo,
   formatGib,
@@ -40,7 +40,7 @@ function greeting(hour: number): string {
 export function DashboardScreen({onOpen}: DashboardScreenProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const {width} = useWindowDimensions();
+  const {width} = useWindowSize();
 
   const username = useAuthStore(state => state.username) ?? 'utente';
   const info = useComputerInfo();

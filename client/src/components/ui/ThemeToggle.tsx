@@ -1,6 +1,6 @@
 import {Pressable, StyleSheet, Text} from 'react-native';
 import {useSettingsStore} from '../../store/settings';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 interface ThemeToggleProps {
   /** Overrides the app-wide theme switch (used by the login day/night view). */
@@ -19,6 +19,7 @@ export function ThemeToggle({onToggle}: ThemeToggleProps) {
       onPress={onToggle ?? toggleTheme}
       style={({pressed}) => [
         styles.button,
+        cursorPointer,
         {
           backgroundColor: theme.colors.card,
           borderColor: theme.colors.line,

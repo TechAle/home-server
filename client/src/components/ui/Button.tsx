@@ -6,7 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 interface ButtonProps {
   label: string;
@@ -37,6 +37,7 @@ export function Button({
       onPress={onPress}
       style={({pressed}) => [
         styles.base,
+        !isDisabled && cursorPointer,
         {
           backgroundColor: primary ? theme.colors.accent : theme.colors.card,
           borderColor: primary ? 'transparent' : theme.colors.line,

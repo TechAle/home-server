@@ -7,7 +7,7 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
-import {useTheme} from '../../theme';
+import {cursorPointer, useTheme} from '../../theme';
 
 interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -63,7 +63,7 @@ export function TextField({
             accessibilityRole="button"
             hitSlop={8}
             onPress={rightAction.onPress}
-            style={styles.action}>
+            style={[styles.action, cursorPointer]}>
             <Text style={[styles.actionText, {color: theme.colors.muted}]}>
               {rightAction.label}
             </Text>
