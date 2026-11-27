@@ -34,15 +34,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start"],
       "windows": { "runtimeExecutable": "npm.cmd" },
-      "console": "integratedTerminal",
-      "noDebug": true
+      "console": "integratedTerminal"
     },
     {
       "name": "Client: Android",
       "type": "reactnative",
       "request": "launch",
       "cwd": "${workspaceFolder}/client",
-      "platform": "android"
+      "platform": "android",
+      "env": {
+        "ANDROID_HOME": "${env:HOME}/Library/Android/sdk",
+        "ANDROID_SDK_ROOT": "${env:HOME}/Library/Android/sdk"
+      }
     },
     {
       "name": "Client: iOS",
@@ -59,8 +62,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "macos"],
       "windows": { "runtimeExecutable": "npm.cmd" },
-      "console": "integratedTerminal",
-      "noDebug": true
+      "console": "integratedTerminal"
     }
   ]
 }
