@@ -150,6 +150,18 @@ answers `401` without a valid key.
 - **Registration**: disabled when `REGISTRATION_KEY` is empty; the key is read
   from `.env` only, never from the repository.
 
+## Docker
+
+```sh
+cp .env.example .env
+docker compose up -d --build
+```
+
+The compose file publishes the API only on `127.0.0.1:5000` for a reverse proxy
+running on the host (Caddy on the Raspberry), sets `TRUST_PROXY=1` so the auth
+rate limiter sees the real client IP, and keeps SQLite in the
+`home-server-data` volume.
+
 ## Behaviour notes
 
 - Ports, routes and JSON shapes are the same as the Flask app, including the
@@ -168,6 +180,14 @@ answers `401` without a valid key.
 - Scheduled tasks use `setInterval` with `unref()`, so a pending task never
   blocks shutdown; `registry.stop()` clears them on `SIGINT`/`SIGTERM`.
 - CPU usage is sampled over 100 ms, since Node has no `psutil.cpu_percent()`.
+- `/auth/login` and `/auth/register` are rate-limited per IP (10 requests per
+  15 minutes, override with `AUTH_RATE_LIMIT_MAX`). Behind a reverse proxy set
+  `TRUST_PROXY=1` so `req.ip` comes from `X-Forwarded-For`; leave it unset when
+  the server is reachable directly, otherwise clients could spoof the header.
+- The server listens on `0.0.0.0` by default. On a host with Caddy/nginx in
+  front, run it with `HOST=127.0.0.1` so only the proxy can reach it.
+- `REGISTRATION_KEY` must be a long random string when the server is public:
+  empty disables registration, short values can be guessed.
 
 ## Endpoints
 
