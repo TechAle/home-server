@@ -1,13 +1,13 @@
 /**
  * System metrics, without psutil:
- *   CPU temperature -> vcgencmd on Linux, sentinels elsewhere
+ *   CPU temperature -> sysfs thermal zone, then vcgencmd on Linux
  *   disk usage      -> fs.statfs (Linux and macOS)
  *   CPU usage       -> two samples from node:os
  *   memory on macOS -> vm_stat, so cached pages are not counted as used
  *
  * The -591 / -590 sentinels are the Python project's, kept for API compatibility.
  */
-import { statfs } from "node:fs/promises";
+import { readFile, statfs } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -41,8 +41,32 @@ export interface SystemResourceInfo {
   disk: DiskUsage;
 }
 
+/** `/sys/class/thermal/thermal_zone0/temp` reports millidegrees Celsius. */
+export function parseThermalZone(value: string): number | null {
+  const millidegrees = Number(value.trim());
+  return Number.isFinite(millidegrees) && millidegrees > 0
+    ? round(millidegrees / 1000)
+    : null;
+}
+
+/**
+ * sysfs first: it works inside containers, where `vcgencmd` is usually absent.
+ * The Raspberry Pi exposes the CPU zone as `cpu-thermal` in zone 0.
+ */
+async function sysfsTemperature(): Promise<number | null> {
+  try {
+    const raw = await readFile("/sys/class/thermal/thermal_zone0/temp", "utf8");
+    return parseThermalZone(raw);
+  } catch {
+    return null;
+  }
+}
+
 export async function cpuTemperature(): Promise<number> {
   if (isLinux) {
+    const fromSysfs = await sysfsTemperature();
+    if (fromSysfs !== null) return fromSysfs;
+
     try {
       const { stdout } = await execFileAsync("/usr/bin/vcgencmd", ["measure_temp"]);
       const match = stdout.match(/=([\d.]+)/);

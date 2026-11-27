@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  cpuTemperature,
   diskUsage,
   memoryUsage,
+  parseThermalZone,
   parseVmStat,
   systemResourceInfo,
 } from "../src/services/computer/metrics.js";
@@ -26,6 +28,18 @@ test("parseVmStat treats inactive and speculative pages as available", () => {
 test("parseVmStat returns null for unexpected output", () => {
   assert.equal(parseVmStat("nope"), null);
   assert.equal(parseVmStat("Mach Virtual Memory Statistics: (page size of 0 bytes)"), null);
+});
+
+test("parseThermalZone converts millidegrees and rejects empty values", () => {
+  assert.equal(parseThermalZone("49600\n"), 49.6);
+  assert.equal(parseThermalZone("  0  "), null);
+  assert.equal(parseThermalZone(""), null);
+  assert.equal(parseThermalZone("nope"), null);
+});
+
+test("cpuTemperature never throws on the current host", async () => {
+  const value = await cpuTemperature();
+  assert.equal(typeof value, "number");
 });
 
 test("memoryUsage returns real values on every platform", async () => {

@@ -167,10 +167,12 @@ rate limiter sees the real client IP, and keeps SQLite in `server/data`.
 - Ports, routes and JSON shapes are the same as the Flask app, including the
   `-591` sentinel for metrics the host cannot provide.
 - System metrics are real on both Linux and macOS: CPU usage, RAM and disk come
-  from Node/`statfs`. On macOS RAM is read from `vm_stat`, because
-  `os.freemem()` counts only free pages and would report ~99% used. CPU
-  temperature keeps the `-591` sentinel on macOS: it needs privileged tools
-  (`powermetrics`) and is not exposed by the OS to normal processes.
+  from Node/`statfs`. On Linux the CPU temperature is read from
+  `/sys/class/thermal/thermal_zone0/temp` (so it also works inside Docker),
+  with `vcgencmd` as fallback. On macOS RAM is read from `vm_stat`, because
+  `os.freemem()` counts only free pages and would report ~99% used; the CPU
+  temperature keeps the `-591` sentinel because it needs privileged tools
+  (`powermetrics`).
 - `ram.*_mib` values are **GiB**, as in the Python code (the suffix is a legacy
   of the original implementation). Fixing the units would change the API, so it
   is left as-is on purpose.
