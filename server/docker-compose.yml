@@ -15,7 +15,8 @@ services:
       # Only the local reverse proxy may reach the API.
       - "127.0.0.1:5000:5000"
     volumes:
-      - home-server-data:/app/data
+      # SQLite lives in server/data on the host, owned by uid 1000 (node).
+      - ./data:/app/data
     security_opt:
       - no-new-privileges:true
     logging:
@@ -23,6 +24,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  home-server-data:

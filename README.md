@@ -33,11 +33,12 @@ Il server parte su `http://127.0.0.1:5000`. Per il reload automatico usa `npm ru
 ```sh
 cd server
 cp .env.example .env   # compila i segreti (solo la prima volta)
+mkdir -p data
 docker compose up -d --build
 ```
 
 Il container ascolta solo su `127.0.0.1:5000` (pensato dietro Caddy/nginx), usa il
-`.env` del server e salva il database nel volume `home-server-data`.
+`.env` del server e salva il database in `server/data`.
 
 ### Variabili d'ambiente (`.env`)
 

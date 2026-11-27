@@ -154,13 +154,13 @@ answers `401` without a valid key.
 
 ```sh
 cp .env.example .env
+mkdir -p data   # must be writable by uid 1000 (the container's node user)
 docker compose up -d --build
 ```
 
 The compose file publishes the API only on `127.0.0.1:5000` for a reverse proxy
 running on the host (Caddy on the Raspberry), sets `TRUST_PROXY=1` so the auth
-rate limiter sees the real client IP, and keeps SQLite in the
-`home-server-data` volume.
+rate limiter sees the real client IP, and keeps SQLite in `server/data`.
 
 ## Behaviour notes
 

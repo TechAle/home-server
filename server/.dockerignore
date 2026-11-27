@@ -11,3 +11,10 @@ test
 .vscode
 .idea
 README.md
+# Leftovers of the old Flask deployment on the Raspberry.
+venv
+bin
+lib
+lib64
+include
+pyvenv.cfg
