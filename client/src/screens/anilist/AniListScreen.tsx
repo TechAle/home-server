@@ -28,6 +28,14 @@ interface AniListScreenProps {
   }) => void;
 }
 
+type AnimeFilter = 'all' | 'watching' | 'planning';
+
+const FILTERS: {id: AnimeFilter; label: string}[] = [
+  {id: 'all', label: 'Tutto'},
+  {id: 'watching', label: 'Watching'},
+  {id: 'planning', label: 'Planning'},
+];
+
 export function AniListScreen({onPlay}: AniListScreenProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -35,6 +43,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   const markWatched = useMarkWatched();
   const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<AnimeFilter>('all');
   const [marking, setMarking] = useState<string | null>(null);
   const [markError, setMarkError] = useState<{
     title: string;
@@ -89,6 +98,11 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   const waiting = entries.filter(
     ([, item]) => Boolean(item.nextEpisode) && item.link.length === 0,
   ).length;
+  const visible = entries.filter(([, item]) => {
+    if (filter === 'watching') {return item.status === 'CURRENT';}
+    if (filter === 'planning') {return item.status === 'PLANNING';}
+    return true;
+  });
 
   return (
     <View style={styles.root}>
@@ -146,6 +160,43 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
           </Card>
         </View>
 
+        <View style={styles.filters}>
+          {FILTERS.map(option => {
+            const selected = filter === option.id;
+            return (
+              <Pressable
+                key={option.id}
+                accessibilityRole="button"
+                accessibilityState={{selected}}
+                onPress={() => setFilter(option.id)}
+                style={[
+                  styles.filter,
+                  cursorPointer,
+                  {
+                    backgroundColor: selected
+                      ? theme.colors.accent
+                      : theme.colors.card,
+                    borderColor: selected
+                      ? theme.colors.accent
+                      : theme.colors.line,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    {
+                      color: selected
+                        ? theme.colors.onAccent
+                        : theme.colors.ink2,
+                    },
+                  ]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {anime.isError ? (
           <Card>
             <Text style={[styles.note, {color: theme.colors.danger}]}>
@@ -154,16 +205,20 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
           </Card>
         ) : null}
 
-        {!anime.isError && !anime.isPending && entries.length === 0 ? (
+        {!anime.isError && !anime.isPending && visible.length === 0 ? (
           <Card>
             <Text style={[styles.note, {color: theme.colors.muted}]}>
-              Nessun anime in visione.
+              {filter === 'watching'
+                ? 'Nessun anime in visione.'
+                : filter === 'planning'
+                  ? 'Nessun anime pianificato.'
+                  : 'Nessun anime.'}
             </Text>
           </Card>
         ) : null}
 
         <View style={styles.list}>
-          {entries.map(([title, item]) => (
+          {visible.map(([title, item]) => (
             <Card key={title} style={styles.row}>
               <View style={styles.rowHead}>
                 <Text
@@ -304,6 +359,9 @@ const styles = StyleSheet.create({
   summaryCard: {flexGrow: 1, flexBasis: 120, gap: 4},
   summaryValue: {fontSize: 24, fontWeight: '700', letterSpacing: -0.5},
   summaryLabel: {fontSize: 12},
+  filters: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
+  filter: {paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1},
+  filterText: {fontSize: 12.5, fontWeight: '600'},
   list: {gap: 10},
   row: {gap: 8},
   rowHead: {flexDirection: 'row', alignItems: 'center', gap: 10},
