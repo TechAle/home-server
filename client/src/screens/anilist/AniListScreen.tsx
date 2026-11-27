@@ -15,8 +15,9 @@ import {StatusBadge} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
 import {formatAgo, formatAiring} from '../../lib/format';
-import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
+import {useAnimeLinks, useMarkWatched, useRewatchAnime} from '../../queries/anilist';
 import {cursorPointer, useTheme} from '../../theme';
+import type {AnimeListStatus} from '../../types/api';
 import {EpisodeActions} from './components/EpisodeActions';
 import {
   EpisodeDownloadsOverlay,
@@ -30,17 +31,19 @@ interface AniListScreenProps {
     mediaId: number;
     progress: number;
     episode: number;
+    status: AnimeListStatus;
     mode: 'stream' | 'file';
     playUrl?: string;
   }) => void;
 }
 
-type AnimeFilter = 'all' | 'watching' | 'planning';
+type AnimeFilter = 'all' | 'watching' | 'planning' | 'rewatch';
 
 const FILTERS: {id: AnimeFilter; label: string}[] = [
   {id: 'all', label: 'Tutto'},
   {id: 'watching', label: 'Watching'},
   {id: 'planning', label: 'Planning'},
+  {id: 'rewatch', label: 'Rewatch'},
 ];
 
 export function AniListScreen({onPlay}: AniListScreenProps) {
@@ -48,6 +51,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   const queryClient = useQueryClient();
   const anime = useAnimeLinks();
   const markWatched = useMarkWatched();
+  const rewatch = useRewatchAnime();
   const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<AnimeFilter>('all');
@@ -64,6 +68,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     progress: number;
     episodes: number;
     episodeBase: string;
+    status: AnimeListStatus;
   } | null>(null);
   const [download, setDownload] = useState<EpisodeDownloadsRequest | null>(null);
 
@@ -80,6 +85,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     title: string,
     mediaId: number,
     progress: number,
+    status: AnimeListStatus,
   ) => {
     if (marking) {
       return;
@@ -89,7 +95,11 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     setMarkError(null);
 
     try {
-      await markWatched.mutateAsync({mediaId, progress: progress + 1});
+      await markWatched.mutateAsync({
+        mediaId,
+        progress: progress + 1,
+        status: status === 'REPEATING' ? 'REPEATING' : 'CURRENT',
+      });
       await anime.refetch();
     } catch (failure) {
       setMarkError({title, message: errorMessage(failure)});
@@ -100,7 +110,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
 
   const entries = Object.entries(anime.data ?? {});
   const watching = entries.filter(
-    ([, item]) => item.status === 'CURRENT',
+    ([, item]) => item.status === 'CURRENT' || item.status === 'REPEATING',
   ).length;
   const planning = entries.filter(
     ([, item]) => item.status === 'PLANNING',
@@ -109,8 +119,11 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     ([, item]) => Boolean(item.nextEpisode) && item.link.length === 0,
   ).length;
   const visible = entries.filter(([, item]) => {
-    if (filter === 'watching') {return item.status === 'CURRENT';}
+    if (filter === 'watching') {
+      return item.status === 'CURRENT' || item.status === 'REPEATING';
+    }
     if (filter === 'planning') {return item.status === 'PLANNING';}
+    if (filter === 'rewatch') {return item.status === 'REPEATING';}
     return true;
   });
 
@@ -223,7 +236,9 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                 ? 'Nessun anime in visione.'
                 : filter === 'planning'
                   ? 'Nessun anime pianificato.'
-                  : 'Nessun anime.'}
+                  : filter === 'rewatch'
+                    ? 'Nessun anime in rewatch.'
+                    : 'Nessun anime.'}
             </Text>
           </Card>
         ) : null}
@@ -248,7 +263,9 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                   label={
                     item.status === 'PLANNING'
                       ? 'Pianificato'
-                      : `Ep. ${item.progress}`
+                      : item.status === 'REPEATING'
+                        ? 'Rewatch'
+                        : `Ep. ${item.progress}`
                   }
                 />
               </View>
@@ -273,7 +290,12 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                     accessibilityLabel={`Segna come visto l'episodio ${item.progress + 1}`}
                     disabled={marking === title}
                     onPress={() =>
-                      markEpisodeWatched(title, item.mediaId, item.progress)
+                      markEpisodeWatched(
+                        title,
+                        item.mediaId,
+                        item.progress,
+                        item.status,
+                      )
                     }
                     style={[
                       styles.ghost,
@@ -305,6 +327,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                         episodeBase:
                           item.episodeBase ||
                           item.link[0].replace(/\/ep-\d+\/?$/, ''),
+                        status: item.status,
                       })
                     }
                     style={[
@@ -359,6 +382,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             mediaId: choice.mediaId,
             progress: choice.progress,
             episode: choice.episode,
+            status: choice.status,
             mode: 'stream',
           });
           setChoice(null);
@@ -373,6 +397,7 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             episodes: choice.episodes,
             episodeBase: choice.episodeBase,
             mediaId: choice.mediaId,
+            status: choice.status,
           });
           setChoice(null);
         }}
@@ -388,8 +413,54 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
               mediaId: download.mediaId,
               progress: download.progress,
               episode,
+              status: download.status,
               mode: 'file',
               playUrl,
+            });
+            setDownload(null);
+          }}
+          onRewatch={async episode => {
+            if (!download.mediaId) {
+              throw new Error('Media ID non disponibile per questo anime.');
+            }
+            await rewatch.mutateAsync({
+              mediaId: download.mediaId,
+              progress: Math.max(0, episode - 1),
+            });
+            setDownload(null);
+          }}
+          onWatchSaved={job => {
+            if (!job.playUrl) {
+              return;
+            }
+            const current = anime.data?.[job.title];
+            const status: AnimeListStatus =
+              current?.status ??
+              (job.animeStatus === 'REPEATING'
+                ? 'REPEATING'
+                : job.animeStatus === 'PLANNING'
+                  ? 'PLANNING'
+                  : 'CURRENT');
+            const episodeBase = current?.episodeBase ?? job.episodeBase;
+            onPlay({
+              title: job.title,
+              url: episodeBase ? `${episodeBase}/ep-${job.episode}` : '',
+              mediaId: current?.mediaId ?? job.mediaId,
+              progress: current?.progress ?? job.animeProgress,
+              episode: job.episode,
+              status,
+              mode: 'file',
+              playUrl: job.playUrl,
+            });
+            setDownload(null);
+          }}
+          onRewatchSaved={async job => {
+            if (!job.mediaId) {
+              throw new Error('Media ID non disponibile per questo download.');
+            }
+            await rewatch.mutateAsync({
+              mediaId: job.mediaId,
+              progress: Math.max(0, job.episode - 1),
             });
             setDownload(null);
           }}

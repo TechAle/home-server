@@ -57,7 +57,7 @@ export interface NextEpisode {
   airingAtIso: string | null;
 }
 
-export type AnimeListStatus = 'CURRENT' | 'PLANNING';
+export type AnimeListStatus = 'CURRENT' | 'PLANNING' | 'REPEATING';
 
 export interface AnimeToWatch {
   mediaId: number;
@@ -83,6 +83,10 @@ export interface AnimeDownload {
   total: number;
   error?: string;
   playUrl?: string;
+  mediaId: number;
+  episodeBase: string;
+  animeStatus: string;
+  animeProgress: number;
 }
 
 export type ToWatch = Record<string, AnimeToWatch>;

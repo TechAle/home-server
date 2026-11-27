@@ -29,6 +29,7 @@ export function MainNavigator() {
     mediaId: number;
     progress: number;
     episode: number;
+    status: 'CURRENT' | 'PLANNING' | 'REPEATING';
     mode: 'stream' | 'file';
     playUrl?: string;
   } | null>(null);
@@ -91,6 +92,7 @@ export function MainNavigator() {
           mediaId={stream.mediaId}
           progress={stream.progress}
           episode={stream.episode}
+          status={stream.status}
           onNext={setStream}
           onClose={() => setStream(null)}
         />

@@ -16,6 +16,7 @@ import {resolveEpisodeEmbed} from '../../../lib/anisaturn';
 import {errorMessage} from '../../../lib/errors';
 import {useAnimeLinks, useMarkWatched} from '../../../queries/anilist';
 import {cursorPointer, useTheme} from '../../../theme';
+import type {AnimeListStatus} from '../../../types/api';
 
 /** Same browser identity the server uses for AniSaturn. */
 const ANISATURN_USER_AGENT =
@@ -82,12 +83,15 @@ interface EpisodePlayerProps {
   progress: number;
   /** Episode currently being watched (1-based). */
   episode: number;
+  /** CURRENT, PLANNING or REPEATING; preserves rewatches. */
+  status: AnimeListStatus;
   onNext: (stream: {
     title: string;
     url: string;
     mediaId: number;
     progress: number;
     episode: number;
+    status: AnimeListStatus;
     mode: 'stream' | 'file';
     playUrl?: string;
   }) => void;
@@ -101,6 +105,7 @@ export function EpisodePlayer({
   mediaId,
   progress,
   episode,
+  status,
   onNext,
   onClose,
 }: EpisodePlayerProps) {
@@ -165,9 +170,15 @@ export function EpisodePlayer({
     // one being watched.
     const newProgress = Math.max(progress, episode);
     const nextEpisode = newProgress + 1;
+    const nextStatus: 'CURRENT' | 'REPEATING' =
+      status === 'REPEATING' ? 'REPEATING' : 'CURRENT';
 
     try {
-      await markWatched.mutateAsync({mediaId, progress: newProgress});
+      await markWatched.mutateAsync({
+        mediaId,
+        progress: newProgress,
+        status: nextStatus,
+      });
 
       // Prefer an already-downloaded next episode; the stream is the fallback.
       const [result, downloads] = await Promise.all([
@@ -190,6 +201,7 @@ export function EpisodePlayer({
           mediaId,
           progress: newProgress,
           episode: nextEpisode,
+          status: nextStatus,
           mode: 'file',
           playUrl: downloadedUrl,
         });
@@ -209,6 +221,7 @@ export function EpisodePlayer({
         mediaId,
         progress: newProgress,
         episode: nextEpisode,
+        status: nextStatus,
         mode: 'stream',
       });
     } catch (nextFailure) {

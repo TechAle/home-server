@@ -61,7 +61,9 @@ export function DashboardScreen({onOpen}: DashboardScreenProps) {
   };
 
   const titles = Object.values(anime.data ?? {});
-  const watching = titles.filter(item => item.status === 'CURRENT').length;
+  const watching = titles.filter(
+    item => item.status === 'CURRENT' || item.status === 'REPEATING',
+  ).length;
   const planning = titles.filter(item => item.status === 'PLANNING').length;
   const waiting = titles.filter(
     item => Boolean(item.nextEpisode) && item.link.length === 0,

@@ -1,9 +1,11 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {
   deleteAnimeDownload,
+  fetchAllAnimeDownloads,
   fetchAnimeDownload,
   fetchAnimeDownloads,
   fetchAnimeLinks,
+  markAnimeRewatch,
   markAnimeWatched,
   startAnimeDownload,
 } from '../api/anilist';
@@ -23,8 +25,27 @@ export function useMarkWatched() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationFn: ({
+      mediaId,
+      progress,
+      status,
+    }: {
+      mediaId: number;
+      progress: number;
+      status?: 'CURRENT' | 'REPEATING';
+    }) => markAnimeWatched(mediaId, progress, status),
+    onSuccess: () =>
+      queryClient.invalidateQueries({queryKey: queryKeys.anilist.toWatch}),
+  });
+}
+
+/** Move an anime to AniList's REPEATING status from a given progress. */
+export function useRewatchAnime() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: ({mediaId, progress}: {mediaId: number; progress: number}) =>
-      markAnimeWatched(mediaId, progress),
+      markAnimeRewatch(mediaId, progress),
     onSuccess: () =>
       queryClient.invalidateQueries({queryKey: queryKeys.anilist.toWatch}),
   });
@@ -36,10 +57,14 @@ export function useStartAnimeDownload() {
 
   return useMutation({
     mutationFn: startAnimeDownload,
-    onSuccess: (_job, input) =>
+    onSuccess: (_job, input) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.anilist.downloads(input.title),
-      }),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.anilist.downloadsAll,
+      });
+    },
   });
 }
 
@@ -66,12 +91,24 @@ export function useAnimeDownloads(title: string) {
   });
 }
 
+/** All completed downloads, used by the "Tutti" library view. */
+export function useAllAnimeDownloads(enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.anilist.downloadsAll,
+    queryFn: fetchAllAnimeDownloads,
+    enabled,
+    staleTime: 0,
+  });
+}
+
 export function useDeleteAnimeDownload() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: deleteAnimeDownload,
-    onSuccess: () =>
-      queryClient.invalidateQueries({queryKey: ['anilist', 'downloads']}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['anilist', 'downloads']});
+      queryClient.invalidateQueries({queryKey: queryKeys.anilist.downloadsAll});
+    },
   });
 }
