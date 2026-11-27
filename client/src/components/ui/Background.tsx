@@ -15,6 +15,9 @@ import {useTheme, type Theme} from '../../theme';
 const ANIMATIONS_ENABLED = process.env.NODE_ENV !== 'test';
 const BAND_COUNT = 24;
 const CLOUD_FRAME_MS = 33;
+const STAR_COUNT = 50;
+const STAR_TICK_MS = 40;
+const STAR_FADE_MS = 900;
 
 function parseHex(hex: string): [number, number, number] {
   const value = hex.replace('#', '');
@@ -124,8 +127,39 @@ function Celestial({theme}: {theme: Theme}) {
   );
 }
 
-/** Static stars for the dark home: same idea as the mockup's night sky. */
-function StaticStars({
+interface HomeStar {
+  key: number;
+  x: number;
+  y: number;
+  size: number;
+  baseOpacity: number;
+  phase: number;
+  twinkleSpeed: number;
+  age: number;
+  life: number;
+  respawnAt: number;
+}
+
+function createStar(key: number, width: number, height: number): HomeStar {
+  return {
+    key,
+    x: Math.random() * width,
+    y: Math.random() * height * 0.9,
+    size: 1 + Math.random() * 1.8,
+    baseOpacity: 0.25 + Math.random() * 0.6,
+    phase: Math.random() * Math.PI * 2,
+    twinkleSpeed: 0.6 + Math.random() * 1.2,
+    age: 0,
+    life: 5_000 + Math.random() * 9_000,
+    respawnAt: 0,
+  };
+}
+
+/**
+ * Home night sky: each star twinkles softly, fades out at the end of its life,
+ * waits a moment, then reappears at a new random position and fades in.
+ */
+function HomeStars({
   width,
   height,
   color,
@@ -134,34 +168,86 @@ function StaticStars({
   height: number;
   color: string;
 }) {
-  const stars = useMemo(
-    () =>
-      Array.from({length: 80}, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height * 0.85,
-        size: 1 + Math.random() * 2,
-        opacity: 0.2 + Math.random() * 0.6,
-      })),
-    [width, height],
+  const [stars, setStars] = useState<HomeStar[]>(() =>
+    Array.from({length: STAR_COUNT}, (_, index) =>
+      createStar(index, width, height),
+    ),
   );
+
+  useEffect(() => {
+    if (!ANIMATIONS_ENABLED) {
+      return;
+    }
+
+    let raf = 0;
+    let last = Date.now();
+
+    const step = () => {
+      const now = Date.now();
+      const elapsed = now - last;
+
+      if (elapsed >= STAR_TICK_MS) {
+        const dt = Math.min(0.05, elapsed / 1000);
+        last = now;
+
+        setStars(current =>
+          current.map(star => {
+            if (star.respawnAt > 0) {
+              if (now < star.respawnAt) {
+                return star;
+              }
+              return createStar(star.key, width, height);
+            }
+
+            const age = star.age + dt * 1000;
+            if (age >= star.life) {
+              return {
+                ...star,
+                age: star.life,
+                respawnAt: now + 300 + Math.random() * 1_200,
+              };
+            }
+
+            return {...star, age};
+          }),
+        );
+      }
+
+      raf = requestAnimationFrame(step);
+    };
+
+    raf = requestAnimationFrame(step);
+
+    return () => cancelAnimationFrame(raf);
+  }, [width, height]);
 
   return (
     <>
-      {stars.map((star, index) => (
-        <View
-          key={index}
-          style={{
-            position: 'absolute',
-            left: star.x,
-            top: star.y,
-            width: star.size,
-            height: star.size,
-            borderRadius: star.size / 2,
-            backgroundColor: color,
-            opacity: star.opacity,
-          }}
-        />
-      ))}
+      {stars.map(star => {
+        const twinkle =
+          0.75 + 0.25 * Math.sin(star.phase + star.age * 0.001 * star.twinkleSpeed);
+        const fadeIn = Math.min(1, star.age / STAR_FADE_MS);
+        const fadeOut = Math.min(1, (star.life - star.age) / STAR_FADE_MS);
+        const envelope = Math.max(0, Math.min(fadeIn, fadeOut));
+        const opacity =
+          star.respawnAt > 0 ? 0 : star.baseOpacity * twinkle * envelope;
+
+        return (
+          <View
+            key={star.key}
+            style={{
+              position: 'absolute',
+              left: star.x,
+              top: star.y,
+              width: star.size,
+              height: star.size,
+              borderRadius: star.size / 2,
+              backgroundColor: color,
+              opacity,
+            }}
+          />
+        );
+      })}
     </>
   );
 }
@@ -342,7 +428,7 @@ export function Background({variant}: {variant: 'login' | 'home'}) {
       <Sky theme={theme} height={height} />
       {theme.mode === 'dark' ? (
         <>
-          <StaticStars width={width} height={height} color={theme.colors.star} />
+          <HomeStars width={width} height={height} color={theme.colors.star} />
           <Celestial theme={theme} />
         </>
       ) : (
