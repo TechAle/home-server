@@ -9,9 +9,11 @@ const config = await loadConfiguration();
 const { app, registry } = await createApp(config);
 
 const port = Number(process.env.PORT ?? 5000);
+/** Loopback behind a reverse proxy (`HOST=127.0.0.1`), all interfaces otherwise. */
+const host = (process.env.HOST ?? "").trim() || "0.0.0.0";
 
-const server: Server = app.listen(port, () => {
-  console.info(`[app] listening on http://0.0.0.0:${port}`);
+const server: Server = app.listen(port, host, () => {
+  console.info(`[app] listening on http://${host}:${port}`);
   const { routes } = registry.snapshot();
   console.info(`[app] routes: ${routes.map((route) => `${route.method} ${route.url}`).join(", ")}`);
 });

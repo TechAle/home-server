@@ -30,7 +30,7 @@ async function startServer() {
     templates: join(serverRoot, "templates"),
   };
 
-  const { app, registry } = await createApp(config, { log: silent });
+  const { app, registry } = await createApp(config, { log: silent, authRateLimitMax: 1000 });
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const { port } = server.address() as AddressInfo;
