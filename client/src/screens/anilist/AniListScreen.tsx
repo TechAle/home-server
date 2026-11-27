@@ -18,7 +18,10 @@ import {formatAgo, formatAiring} from '../../lib/format';
 import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
 import {cursorPointer, useTheme} from '../../theme';
 import {EpisodeActions} from './components/EpisodeActions';
-import {DownloadOverlay} from './components/DownloadOverlay';
+import {
+  EpisodeDownloadsOverlay,
+  type EpisodeDownloadsRequest,
+} from './components/EpisodeDownloadsOverlay';
 
 interface AniListScreenProps {
   onPlay: (stream: {
@@ -58,14 +61,10 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
     url: string;
     mediaId: number;
     progress: number;
+    episodes: number;
+    episodeBase: string;
   } | null>(null);
-  const [download, setDownload] = useState<{
-    title: string;
-    episode: number;
-    url: string;
-    mediaId: number;
-    progress: number;
-  } | null>(null);
+  const [download, setDownload] = useState<EpisodeDownloadsRequest | null>(null);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -294,6 +293,12 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                         url: item.link[0],
                         mediaId: item.mediaId,
                         progress: item.progress,
+                        // Fallbacks keep the action working with a cache created
+                        // before episodes/episodeBase existed.
+                        episodes: item.episodes || item.progress + 1,
+                        episodeBase:
+                          item.episodeBase ||
+                          item.link[0].replace(/\/ep-\d+\/?$/, ''),
                       })
                     }
                     style={[
@@ -354,20 +359,26 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
           if (!choice) {
             return;
           }
-          setDownload(choice);
+          setDownload({
+            title: choice.title,
+            progress: choice.progress,
+            episodes: choice.episodes,
+            episodeBase: choice.episodeBase,
+            mediaId: choice.mediaId,
+          });
           setChoice(null);
         }}
       />
 
       {download ? (
-        <DownloadOverlay
+        <EpisodeDownloadsOverlay
           request={download}
-          onDone={playUrl => {
+          onWatch={(episode, playUrl) => {
             onPlay({
               title: download.title,
-              url: download.url,
+              url: `${download.episodeBase}/ep-${episode}`,
               mediaId: download.mediaId,
-              progress: download.progress,
+              progress: episode - 1,
               mode: 'file',
               playUrl,
             });

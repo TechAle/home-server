@@ -13,21 +13,33 @@ export function fetchAnimeLinks(): Promise<ToWatch> {
   return request<ToWatch>('/get_anime');
 }
 
-export async function startAnimeDownload(input: {
+export function startAnimeDownload(input: {
   url: string;
   title: string;
   episode: number;
 }): Promise<AnimeDownload> {
-  const job = await request<AnimeDownload>('/anime/download', {
+  return request<AnimeDownload>('/anime/download', {
     method: 'POST',
     body: input,
-  });
-  return withAbsolutePlayUrl(job);
+  }).then(withAbsolutePlayUrl);
 }
 
 export async function fetchAnimeDownload(id: string): Promise<AnimeDownload> {
   const job = await request<AnimeDownload>(`/anime/download/${encodeURIComponent(id)}`);
   return withAbsolutePlayUrl(job);
+}
+
+export async function fetchAnimeDownloads(title: string): Promise<AnimeDownload[]> {
+  const jobs = await request<AnimeDownload[]>(
+    `/anime/downloads?title=${encodeURIComponent(title)}`,
+  );
+  return jobs.map(withAbsolutePlayUrl);
+}
+
+export function deleteAnimeDownload(id: string): Promise<{ok: boolean}> {
+  return request<{ok: boolean}>(`/anime/download/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
 }
 
 export interface MarkWatchedResult {

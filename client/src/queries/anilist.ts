@@ -1,6 +1,8 @@
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {
+  deleteAnimeDownload,
   fetchAnimeDownload,
+  fetchAnimeDownloads,
   fetchAnimeLinks,
   markAnimeWatched,
   startAnimeDownload,
@@ -30,7 +32,15 @@ export function useMarkWatched() {
 
 /** Start a server-side download; the returned job is polled separately. */
 export function useStartAnimeDownload() {
-  return useMutation({mutationFn: startAnimeDownload});
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: startAnimeDownload,
+    onSuccess: (_job, input) =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.anilist.downloads(input.title),
+      }),
+  });
 }
 
 export function useAnimeDownload(id: string | null) {
@@ -40,5 +50,28 @@ export function useAnimeDownload(id: string | null) {
     enabled: Boolean(id),
     refetchInterval: query =>
       query.state.data?.status === 'downloading' ? 1000 : false,
+  });
+}
+
+/** Poll the episode list while at least one download is running. */
+export function useAnimeDownloads(title: string) {
+  return useQuery({
+    queryKey: queryKeys.anilist.downloads(title),
+    queryFn: () => fetchAnimeDownloads(title),
+    enabled: Boolean(title),
+    refetchInterval: query =>
+      (query.state.data ?? []).some(job => job.status === 'downloading')
+        ? 1500
+        : false,
+  });
+}
+
+export function useDeleteAnimeDownload() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteAnimeDownload,
+    onSuccess: () =>
+      queryClient.invalidateQueries({queryKey: ['anilist', 'downloads']}),
   });
 }

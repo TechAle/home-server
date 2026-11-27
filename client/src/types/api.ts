@@ -63,6 +63,10 @@ export interface AnimeToWatch {
   mediaId: number;
   status: AnimeListStatus;
   progress: number;
+  /** Episodes available to download. */
+  episodes: number;
+  /** AniSaturn anime URL without `/ep-N`. */
+  episodeBase: string;
   link: string[];
   nextEpisode: NextEpisode | null;
 }
