@@ -37,3 +37,6 @@ client/ios/build/
 client/macos/build/
 client/android/build/
 client/android/app/build/
+
+# Personal VS Code workspace files
+*.code-workspace
