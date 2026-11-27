@@ -9,7 +9,7 @@ Monorepo con due progetti:
 
 ## Prerequisiti
 
-- Node.js >= 18 (npm per il server, Yarn per il client)
+- Node.js >= 22 (npm per il server, Yarn per il client)
 - Xcode + CocoaPods (iOS/macOS)
 - Android SDK con `ANDROID_HOME` impostato
 

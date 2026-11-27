@@ -13,21 +13,17 @@ on:
 
 jobs:
   test:
-    name: node ${{ matrix.node }}
+    name: node 22
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: server
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 22
           cache: npm
           cache-dependency-path: server/package-lock.json
 
