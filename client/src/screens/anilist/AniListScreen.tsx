@@ -32,6 +32,8 @@ interface AniListScreenProps {
     progress: number;
     episode: number;
     status: AnimeListStatus;
+    episodes: number;
+    episodeBase: string;
     mode: 'stream' | 'file';
     playUrl?: string;
   }) => void;
@@ -383,6 +385,8 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             progress: choice.progress,
             episode: choice.episode,
             status: choice.status,
+            episodes: choice.episodes,
+            episodeBase: choice.episodeBase,
             mode: 'stream',
           });
           setChoice(null);
@@ -414,6 +418,8 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
               progress: download.progress,
               episode,
               status: download.status,
+              episodes: download.episodes,
+              episodeBase: download.episodeBase,
               mode: 'file',
               playUrl,
             });
@@ -442,6 +448,8 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
                   ? 'PLANNING'
                   : 'CURRENT');
             const episodeBase = current?.episodeBase ?? job.episodeBase;
+            const episodes =
+              current?.episodes ?? Math.max(job.episode, job.animeProgress);
             onPlay({
               title: job.title,
               url: episodeBase ? `${episodeBase}/ep-${job.episode}` : '',
@@ -449,6 +457,8 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
               progress: current?.progress ?? job.animeProgress,
               episode: job.episode,
               status,
+              episodes,
+              episodeBase,
               mode: 'file',
               playUrl: job.playUrl,
             });

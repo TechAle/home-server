@@ -30,6 +30,8 @@ export function MainNavigator() {
     progress: number;
     episode: number;
     status: 'CURRENT' | 'PLANNING' | 'REPEATING';
+    episodes: number;
+    episodeBase: string;
     mode: 'stream' | 'file';
     playUrl?: string;
   } | null>(null);
@@ -93,6 +95,8 @@ export function MainNavigator() {
           progress={stream.progress}
           episode={stream.episode}
           status={stream.status}
+          episodes={stream.episodes}
+          episodeBase={stream.episodeBase}
           onNext={setStream}
           onClose={() => setStream(null)}
         />
