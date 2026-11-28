@@ -77,6 +77,15 @@ RCT_EXPORT_MODULE();
     return;
   }
 
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(appResignedActive:)
+                                               name:NSApplicationDidResignActiveNotification
+                                             object:nil];
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(appResignedActive:)
+                                               name:NSApplicationWillTerminateNotification
+                                             object:nil];
+
   __weak MouseActivity *weakSelf = self;
   _monitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMouseMoved
                                                   handler:^NSEvent *(NSEvent *event) {
@@ -98,10 +107,27 @@ RCT_EXPORT_MODULE();
 
 - (void)stopObserving
 {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+
   if (_monitor != nil) {
     [NSEvent removeMonitor:_monitor];
     _monitor = nil;
   }
+
+  [NSCursor setHiddenUntilMouseMoves:NO];
+}
+
+- (void)appResignedActive:(NSNotification *)notification
+{
+  [NSCursor setHiddenUntilMouseMoves:NO];
+}
+
+RCT_EXPORT_METHOD(setCursorHidden:(BOOL)hidden)
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    // Hides until the next mouse move; NO restores it immediately.
+    [NSCursor setHiddenUntilMouseMoves:hidden];
+  });
 }
 
 @end

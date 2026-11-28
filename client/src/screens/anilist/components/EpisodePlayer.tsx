@@ -171,15 +171,23 @@ export function EpisodePlayer({
     return new NativeEventEmitter(NativeModules.MouseActivity);
   }, []);
 
+  const setCursorHidden = useCallback((hidden: boolean) => {
+    if (Platform.OS !== 'macos' || !NativeModules.MouseActivity?.setCursorHidden) {
+      return;
+    }
+    NativeModules.MouseActivity.setCursorHidden(hidden);
+  }, []);
+
   const hideControls = useCallback(() => {
     controlsVisibleRef.current = false;
     setControlsVisible(false);
+    setCursorHidden(true);
     Animated.timing(controlsOpacity, {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [controlsOpacity]);
+  }, [controlsOpacity, setCursorHidden]);
 
   const scheduleHide = useCallback(() => {
     if (hideTimer.current) {
@@ -196,6 +204,7 @@ export function EpisodePlayer({
     if (!controlsVisibleRef.current) {
       controlsVisibleRef.current = true;
       setControlsVisible(true);
+      setCursorHidden(false);
       Animated.timing(controlsOpacity, {
         toValue: 1,
         duration: 220,
@@ -203,7 +212,7 @@ export function EpisodePlayer({
       }).start();
     }
     scheduleHide();
-  }, [controlsOpacity, scheduleHide]);
+  }, [controlsOpacity, scheduleHide, setCursorHidden]);
 
   const onActivity = useCallback(() => {
     if (fullscreen) {
@@ -220,6 +229,7 @@ export function EpisodePlayer({
       controlsOpacity.setValue(1);
       controlsVisibleRef.current = true;
       setControlsVisible(true);
+      setCursorHidden(false);
       return;
     }
 
@@ -229,8 +239,9 @@ export function EpisodePlayer({
         clearTimeout(hideTimer.current);
         hideTimer.current = null;
       }
+      setCursorHidden(false);
     };
-  }, [fullscreen, controlsOpacity, showControls]);
+  }, [fullscreen, controlsOpacity, setCursorHidden, showControls]);
 
   useEffect(() => {
     if (!fullscreen || !mouseEmitter) {
