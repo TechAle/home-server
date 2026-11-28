@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from 'react-native';
 import {WebView} from 'react-native-webview';
 import {fetchAnimeDownloads} from '../../../api/anilist';
@@ -160,6 +161,10 @@ export function EpisodePlayer({
   const [nextError, setNextError] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const cursorNone =
+    Platform.OS === 'macos'
+      ? ({cursor: 'none'} as unknown as ViewStyle)
+      : undefined;
   const controlsOpacity = useRef(new Animated.Value(1)).current;
   const controlsVisibleRef = useRef(true);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -171,23 +176,15 @@ export function EpisodePlayer({
     return new NativeEventEmitter(NativeModules.MouseActivity);
   }, []);
 
-  const setCursorHidden = useCallback((hidden: boolean) => {
-    if (Platform.OS !== 'macos' || !NativeModules.MouseActivity?.setCursorHidden) {
-      return;
-    }
-    NativeModules.MouseActivity.setCursorHidden(hidden);
-  }, []);
-
   const hideControls = useCallback(() => {
     controlsVisibleRef.current = false;
     setControlsVisible(false);
-    setCursorHidden(true);
     Animated.timing(controlsOpacity, {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
     }).start();
-  }, [controlsOpacity, setCursorHidden]);
+  }, [controlsOpacity]);
 
   const scheduleHide = useCallback(() => {
     if (hideTimer.current) {
@@ -204,7 +201,6 @@ export function EpisodePlayer({
     if (!controlsVisibleRef.current) {
       controlsVisibleRef.current = true;
       setControlsVisible(true);
-      setCursorHidden(false);
       Animated.timing(controlsOpacity, {
         toValue: 1,
         duration: 220,
@@ -212,7 +208,7 @@ export function EpisodePlayer({
       }).start();
     }
     scheduleHide();
-  }, [controlsOpacity, scheduleHide, setCursorHidden]);
+  }, [controlsOpacity, scheduleHide]);
 
   const onActivity = useCallback(() => {
     if (fullscreen) {
@@ -229,7 +225,6 @@ export function EpisodePlayer({
       controlsOpacity.setValue(1);
       controlsVisibleRef.current = true;
       setControlsVisible(true);
-      setCursorHidden(false);
       return;
     }
 
@@ -239,9 +234,8 @@ export function EpisodePlayer({
         clearTimeout(hideTimer.current);
         hideTimer.current = null;
       }
-      setCursorHidden(false);
     };
-  }, [fullscreen, controlsOpacity, setCursorHidden, showControls]);
+  }, [fullscreen, controlsOpacity, showControls]);
 
   useEffect(() => {
     if (!fullscreen || !mouseEmitter) {
@@ -444,6 +438,7 @@ export function EpisodePlayer({
       onTouchStart={onActivity}
       style={[
         styles.root,
+        fullscreen && !controlsVisible && cursorNone,
         Platform.OS === 'android' && {paddingTop: StatusBar.currentHeight ?? 0},
       ]}>
       {!fullscreen ? (
@@ -643,6 +638,13 @@ export function EpisodePlayer({
           </Pressable>
           {nextError ? <Text style={styles.fsError}>{nextError}</Text> : null}
         </Animated.View>
+      ) : null}
+
+      {fullscreen && !controlsVisible && cursorNone ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, cursorNone]}
+        />
       ) : null}
 
       {pickerOpen ? (
