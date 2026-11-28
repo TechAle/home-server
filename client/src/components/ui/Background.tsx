@@ -418,12 +418,8 @@ export function Background({variant}: {variant: 'login' | 'home'}) {
   const theme = useTheme();
   const {width, height} = useWindowSize();
 
-  // In the dark theme the persistent VantaLayer in RootShell owns the night
-  // background; in light it is the day sky below.
-  if (variant === 'login' && theme.mode === 'dark') {
-    return null;
-  }
-
+  // The public screens use the native night sky: the Vanta WebView is not
+  // mounted there because on Android it steals focus from the login inputs.
   return (
     <View
       pointerEvents="none"

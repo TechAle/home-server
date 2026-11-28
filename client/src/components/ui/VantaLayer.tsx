@@ -71,6 +71,13 @@ export function VantaLayer({visible}: {visible: boolean}) {
   );
   const lines = useMemo(() => computeLines(dots), [dots]);
 
+  // Unmount the WebView entirely when hidden: on Android a mounted WebView is
+  // focusable even with pointerEvents="none" and steals the keyboard focus from
+  // the login TextInputs.
+  if (!visible) {
+    return null;
+  }
+
   return (
     <View
       pointerEvents="none"

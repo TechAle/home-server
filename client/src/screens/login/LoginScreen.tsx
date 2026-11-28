@@ -62,7 +62,13 @@ export function LoginScreen({onRegister, onToggleTheme}: LoginScreenProps) {
             paddingTop: StatusBar.currentHeight ?? 0,
           },
         ]}>
-        <View style={styles.toggle}>
+        <View
+          style={[
+            styles.toggle,
+            Platform.OS === 'android' && {
+              top: 12 + (StatusBar.currentHeight ?? 0),
+            },
+          ]}>
           <ThemeToggle onToggle={onToggleTheme} />
         </View>
         <KeyboardAvoidingView
