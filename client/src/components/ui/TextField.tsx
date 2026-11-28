@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ export function TextField({
 }: TextFieldProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
+  const inputKey = `${theme.mode}-${inputProps.secureTextEntry ? 'secure' : 'plain'}`;
 
   return (
     <View style={styles.container}>
@@ -36,15 +38,18 @@ export function TextField({
               ? theme.colors.accent
               : theme.colors.inputBorder,
           },
-          focused && {
-            shadowColor: theme.colors.accent,
-            shadowOpacity: 0.18,
-            shadowRadius: 6,
-            shadowOffset: {width: 0, height: 0},
-          },
+          // On Android adding shadow props on focus makes the TextInput lose
+          // focus repeatedly while the keyboard opens.
+          Platform.OS !== 'android' &&
+            focused && {
+              shadowColor: theme.colors.accent,
+              shadowOpacity: 0.18,
+              shadowRadius: 6,
+              shadowOffset: {width: 0, height: 0},
+            },
         ]}>
         <TextInput
-          key={`${theme.mode}-${inputProps.secureTextEntry ? 'secure' : 'plain'}`}
+          key={inputKey}
           {...inputProps}
           onFocus={event => {
             setFocused(true);
