@@ -15,7 +15,7 @@ import {StatusBadge} from '../../components/ui/StatusBadge';
 import {errorMessage} from '../../lib/errors';
 import {useNow} from '../../hooks/useNow';
 import {formatAgo, formatAiring} from '../../lib/format';
-import {useAnimeLinks, useMarkWatched, useRewatchAnime} from '../../queries/anilist';
+import {useAnimeLinks, useMarkWatched} from '../../queries/anilist';
 import {cursorPointer, useTheme} from '../../theme';
 import type {AnimeListStatus} from '../../types/api';
 import {EpisodeActions} from './components/EpisodeActions';
@@ -53,7 +53,6 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
   const queryClient = useQueryClient();
   const anime = useAnimeLinks();
   const markWatched = useMarkWatched();
-  const rewatch = useRewatchAnime();
   const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<AnimeFilter>('all');
@@ -425,16 +424,6 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
             });
             setDownload(null);
           }}
-          onRewatch={async episode => {
-            if (!download.mediaId) {
-              throw new Error('Media ID non disponibile per questo anime.');
-            }
-            await rewatch.mutateAsync({
-              mediaId: download.mediaId,
-              progress: Math.max(0, episode - 1),
-            });
-            setDownload(null);
-          }}
           onWatchSaved={job => {
             if (!job.playUrl) {
               return;
@@ -461,17 +450,6 @@ export function AniListScreen({onPlay}: AniListScreenProps) {
               episodeBase,
               mode: 'file',
               playUrl: job.playUrl,
-            });
-            setDownload(null);
-          }}
-          onRewatchSaved={async job => {
-            const mediaId = anime.data?.[job.title]?.mediaId ?? job.mediaId;
-            if (!mediaId) {
-              throw new Error('Media ID non disponibile per questo download.');
-            }
-            await rewatch.mutateAsync({
-              mediaId,
-              progress: Math.max(0, job.episode - 1),
             });
             setDownload(null);
           }}

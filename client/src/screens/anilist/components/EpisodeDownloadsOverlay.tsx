@@ -25,9 +25,7 @@ export interface EpisodeDownloadsRequest {
 interface EpisodeDownloadsOverlayProps {
   request: EpisodeDownloadsRequest;
   onWatch: (episode: number, playUrl: string) => void;
-  onRewatch: (episode: number) => Promise<void>;
   onWatchSaved: (job: AnimeDownload) => void;
-  onRewatchSaved: (job: AnimeDownload) => Promise<void>;
   onClose: () => void;
 }
 
@@ -64,9 +62,7 @@ function Action({
 export function EpisodeDownloadsOverlay({
   request,
   onWatch,
-  onRewatch,
   onWatchSaved,
-  onRewatchSaved,
   onClose,
 }: EpisodeDownloadsOverlayProps) {
   const theme = useTheme();
@@ -111,24 +107,6 @@ export function EpisodeDownloadsOverlay({
     setError('');
     try {
       await remove.mutateAsync(job.id);
-    } catch (failure) {
-      setError(errorMessage(failure));
-    }
-  };
-
-  const rewatchEpisode = async (episode: number) => {
-    setError('');
-    try {
-      await onRewatch(episode);
-    } catch (failure) {
-      setError(errorMessage(failure));
-    }
-  };
-
-  const rewatchSaved = async (job: AnimeDownload) => {
-    setError('');
-    try {
-      await onRewatchSaved(job);
     } catch (failure) {
       setError(errorMessage(failure));
     }
@@ -281,11 +259,6 @@ export function EpisodeDownloadsOverlay({
                             onPress={() => onWatch(episode, job.playUrl as string)}
                           />
                           <Action
-                            label="Rewatch"
-                            tone="accent"
-                            onPress={() => rewatchEpisode(episode)}
-                          />
-                          <Action
                             label="Elimina"
                             tone="danger"
                             onPress={() => removeEpisode(job)}
@@ -358,11 +331,6 @@ export function EpisodeDownloadsOverlay({
                         label="Guarda"
                         tone="accent"
                         onPress={() => onWatchSaved(job)}
-                      />
-                      <Action
-                        label="Rewatch"
-                        tone="accent"
-                        onPress={() => rewatchSaved(job)}
                       />
                       <Action
                         label="Elimina"
