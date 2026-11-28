@@ -1,7 +1,10 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Linking,
+  NativeEventEmitter,
+  NativeModules,
   Platform,
   Pressable,
   SafeAreaView,
@@ -157,6 +160,85 @@ export function EpisodePlayer({
   const [nextError, setNextError] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const controlsOpacity = useRef(new Animated.Value(1)).current;
+  const controlsVisibleRef = useRef(true);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseEmitter = useMemo(() => {
+    if (Platform.OS !== 'macos' || !NativeModules.MouseActivity) {
+      return null;
+    }
+    return new NativeEventEmitter(NativeModules.MouseActivity);
+  }, []);
+
+  const hideControls = useCallback(() => {
+    controlsVisibleRef.current = false;
+    setControlsVisible(false);
+    Animated.timing(controlsOpacity, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [controlsOpacity]);
+
+  const scheduleHide = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    hideTimer.current = setTimeout(hideControls, 5000);
+  }, [hideControls]);
+
+  const showControls = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    if (!controlsVisibleRef.current) {
+      controlsVisibleRef.current = true;
+      setControlsVisible(true);
+      Animated.timing(controlsOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: false,
+      }).start();
+    }
+    scheduleHide();
+  }, [controlsOpacity, scheduleHide]);
+
+  const onActivity = useCallback(() => {
+    if (fullscreen) {
+      showControls();
+    }
+  }, [fullscreen, showControls]);
+
+  useEffect(() => {
+    if (!fullscreen) {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      controlsOpacity.setValue(1);
+      controlsVisibleRef.current = true;
+      setControlsVisible(true);
+      return;
+    }
+
+    showControls();
+    return () => {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+    };
+  }, [fullscreen, controlsOpacity, showControls]);
+
+  useEffect(() => {
+    if (!fullscreen || !mouseEmitter) {
+      return;
+    }
+    const subscription = mouseEmitter.addListener('mouseMoved', onActivity);
+    return () => subscription.remove();
+  }, [fullscreen, mouseEmitter, onActivity]);
 
   useEffect(() => {
     let cancelled = false;
@@ -347,6 +429,8 @@ export function EpisodePlayer({
   return (
     <SafeAreaView
       accessibilityViewIsModal
+      onPointerMove={onActivity}
+      onTouchStart={onActivity}
       style={[
         styles.root,
         Platform.OS === 'android' && {paddingTop: StatusBar.currentHeight ?? 0},
@@ -523,7 +607,9 @@ export function EpisodePlayer({
       </View>
 
       {fullscreen ? (
-        <>
+        <Animated.View
+          pointerEvents={controlsVisible ? 'box-none' : 'none'}
+          style={[StyleSheet.absoluteFill, {opacity: controlsOpacity}]}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Prossimo episodio"
@@ -545,7 +631,7 @@ export function EpisodePlayer({
             <Text pointerEvents="none" style={styles.fsExitText}>✕</Text>
           </Pressable>
           {nextError ? <Text style={styles.fsError}>{nextError}</Text> : null}
-        </>
+        </Animated.View>
       ) : null}
 
       {pickerOpen ? (

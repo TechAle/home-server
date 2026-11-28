@@ -1,6 +1,8 @@
 #import "AppDelegate.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTBridgeModule.h>
+#import <React/RCTEventEmitter.h>
 
 @implementation AppDelegate
 
@@ -40,6 +42,66 @@
 #else
   return false;
 #endif
+}
+
+@end
+
+/**
+ * Emits a throttled `mouseMoved` event for the app's windows. The player
+ * WebView handles the pointer itself, so a JS `onPointerMove` never reaches
+ * React Native; a local NSEvent monitor sees every mouse move instead.
+ */
+@interface MouseActivity : RCTEventEmitter <RCTBridgeModule>
+@end
+
+@implementation MouseActivity {
+  id _monitor;
+  CFAbsoluteTime _lastEvent;
+}
+
+RCT_EXPORT_MODULE();
+
++ (BOOL)requiresMainQueueSetup
+{
+  return NO;
+}
+
+- (NSArray<NSString *> *)supportedEvents
+{
+  return @[ @"mouseMoved" ];
+}
+
+- (void)startObserving
+{
+  if (_monitor != nil) {
+    return;
+  }
+
+  __weak MouseActivity *weakSelf = self;
+  _monitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMouseMoved
+                                                  handler:^NSEvent *(NSEvent *event) {
+    MouseActivity *strongSelf = weakSelf;
+    if (strongSelf == nil) {
+      return event;
+    }
+
+    // ~12 events/s are enough to wake the controls without flooding the bridge.
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (now - strongSelf->_lastEvent >= 0.08) {
+      strongSelf->_lastEvent = now;
+      [strongSelf sendEventWithName:@"mouseMoved" body:nil];
+    }
+
+    return event;
+  }];
+}
+
+- (void)stopObserving
+{
+  if (_monitor != nil) {
+    [NSEvent removeMonitor:_monitor];
+    _monitor = nil;
+  }
 }
 
 @end
